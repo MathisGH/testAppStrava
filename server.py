@@ -71,4 +71,5 @@ def callback():
     return f"✅ {athlete_info['firstname']} {athlete_info['lastname']} ajouté avec succès !"
 
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Récupère le port de Render, sinon 5000 par défaut
+    app.run(host="0.0.0.0", port=port, debug=True)
