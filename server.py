@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 CLIENT_ID = "152701"
 CLIENT_SECRET = "f9994d3d0eac0d314a1ee9c94ccb2dd674debb5d"
-REDIRECT_URI = "http://localhost:5000/callback"  # Remplacez par votre URL de redirection
+REDIRECT_URI = "http://localhost:5000/callback"
 
 ATHLETES_FILE = "athletes.json"
 
