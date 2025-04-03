@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, jsonify, send_file
 import requests
 import json
 import os
@@ -7,23 +7,26 @@ app = Flask(__name__)
 
 CLIENT_ID = "152701"
 CLIENT_SECRET = "f9994d3d0eac0d314a1ee9c94ccb2dd674debb5d"
-REDIRECT_URI = "http://localhost:5000/callback"
+REDIRECT_URI = "https://ton-serveur-render.com/callback"  # Mets ici ton vrai URL Render
 
 ATHLETES_FILE = "athletes.json"
 
 def load_athletes():
+    """ Charge les athlètes depuis le fichier JSON """
     if os.path.exists(ATHLETES_FILE):
         with open(ATHLETES_FILE, "r") as f:
             return json.load(f)
     return {"athletes": {}}
 
 def save_athletes(data):
+    """ Sauvegarde les athlètes dans le fichier JSON """
     with open(ATHLETES_FILE, "w") as f:
         json.dump(data, f, indent=4)
+    print("✅ Fichier athletes.json mis à jour")
 
 @app.route("/")
 def home():
-    """ Génère le lien d'autorisation pour un nouvel athlète """
+    """ Génère le lien d'autorisation Strava """
     auth_url = (f"https://www.strava.com/oauth/authorize?client_id={CLIENT_ID}"
                 f"&redirect_uri={REDIRECT_URI}&response_type=code"
                 f"&approval_prompt=force&scope=activity:read_all")
@@ -34,7 +37,7 @@ def callback():
     """ Récupère le code d'autorisation et échange contre un token """
     code = request.args.get("code")
     if not code:
-        return "Erreur : aucun code d'autorisation reçu."
+        return "❌ Erreur : Aucun code reçu."
 
     token_url = "https://www.strava.com/oauth/token"
     payload = {
@@ -47,7 +50,7 @@ def callback():
     response = requests.post(token_url, data=payload).json()
 
     if "access_token" not in response:
-        return "Erreur : impossible d'obtenir un token."
+        return "❌ Erreur : Impossible d'obtenir un token."
 
     # Obtenir les infos de l'athlète
     access_token = response["access_token"]
@@ -69,6 +72,17 @@ def callback():
     save_athletes(data)
 
     return f"✅ {athlete_info['firstname']} {athlete_info['lastname']} ajouté avec succès !"
+
+@app.route("/athletes")
+def get_athletes():
+    """ Retourne la liste des athlètes enregistrés """
+    data = load_athletes()
+    return jsonify(data)
+
+@app.route("/download_athletes")
+def download_athletes():
+    """ Permet de télécharger le fichier athletes.json """
+    return send_file(ATHLETES_FILE, as_attachment=True)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Récupère le port de Render, sinon 5000 par défaut
