@@ -4,24 +4,23 @@ import os
 import json
 import time
 
-ATHLETES_FILE = "athletes.json"
-DATA_FOLDER = "Data"
-AUTH_URL = "https://www.strava.com/oauth/token"
-ACTIVITIES_URL = "https://www.strava.com/api/v3/athlete/activities"
-ACTIVITY_DETAILS_URL = "https://www.strava.com/api/v3/activities/"
+ATHLETES_FILE = "athletes.json" # JSON où seront stockées les infos des athlètes (id, nom, access et refresh token)
+DATA_FOLDER = "Data" # Où seront stockées les activités récupérées
+AUTH_URL = "https://www.strava.com/oauth/token" # URL pour rafraîchir le token d'accès
+ACTIVITIES_URL = "https://www.strava.com/api/v3/athlete/activities" # URL pour récupérer les activités de l'athlète
+ACTIVITY_DETAILS_URL = "https://www.strava.com/api/v3/activities/" # URL pour récupérer les détails d'une activité
 
 os.makedirs(DATA_FOLDER, exist_ok=True)  # Créer le dossier si inexistant
 
-def load_athletes():
+def load_athletes(): # Charge les athlètes depuis le fichier JSON
     with open(ATHLETES_FILE, "r") as f:
         return json.load(f)["athletes"]
 
-def save_athletes(data):
+def save_athletes(data): # Sauvegarde les athlètes dans le fichier JSON
     with open(ATHLETES_FILE, "w") as f:
         json.dump({"athletes": data}, f, indent=4)
 
-def refresh_token(athlete):
-    """ Rafraîchit le token d'accès """
+def refresh_token(athlete): # Rafraîchit le token d'accès
     payload = {
         "client_id": "152701",
         "client_secret": "f9994d3d0eac0d314a1ee9c94ccb2dd674debb5d",
@@ -33,12 +32,11 @@ def refresh_token(athlete):
     athlete["refresh_token"] = res.get("refresh_token", athlete["refresh_token"])
     return athlete
 
-def fetch_activities():
-    """ Récupère les nouvelles activités avec détails pour chaque athlète """
+def fetch_activities(): # Fonction principale pour récupérer les activités de chaque athlète présent dans le fichier JSON
     athletes = load_athletes()
     
     for athlete_id, athlete in athletes.items():
-        print(f"📊 Récupération des activités pour {athlete['firstname']} {athlete['lastname']}")
+        print(f"Récupération des activités pour {athlete['firstname']} {athlete['lastname']}")
         
         # Rafraîchir le token et sauvegarder
         athlete = refresh_token(athlete)
@@ -72,11 +70,11 @@ def fetch_activities():
 
             new_activities.extend(new_data)
             request_page_num += 1
-            print(f"📥 Page {request_page_num} récupérée ({len(new_data)} nouvelles activités)")
+            print(f"Page {request_page_num} récupérée ({len(new_data)} nouvelles activités)")
 
             # Pause pour éviter le quota API (max 100 req/15 min)
             if request_page_num % 100 == 0:
-                print("🚦 Pause de 15 minutes pour éviter le quota API...")
+                print("Pause de 15 minutes pour éviter le quota API...")
                 time.sleep(900)
 
         # Récupérer les détails des nouvelles activités
@@ -86,7 +84,7 @@ def fetch_activities():
             details = requests.get(f"{ACTIVITY_DETAILS_URL}{activity_id}", headers=headers).json()
             activity.update(details)
             detailed_activities.append(activity)
-            print(f"📊 Détails récupérés pour l'activité {activity_id}")
+            print(f"Détails récupérés pour l'activité {activity_id}")
             time.sleep(1)  # Pause pour respecter les quotas
 
         # Mise à jour du CSV
@@ -94,7 +92,7 @@ def fetch_activities():
             df_new = pd.DataFrame(detailed_activities)
             df_final = pd.concat([df_existing, df_new], ignore_index=True)
             df_final.to_csv(file_path, index=False)
-            print(f"✅ {len(detailed_activities)} nouvelles activités enregistrées pour {athlete['firstname']}")
+            print(f"{len(detailed_activities)} nouvelles activités enregistrées pour {athlete['firstname']}")
 
 if __name__ == "__main__":
     fetch_activities()

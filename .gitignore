@@ -1,0 +1,26 @@
+# === FICHIERS PERSONNELS ===
+athletes.json
+*.xlsx
+*.csv
+
+# === JUPYTER NOTEBOOKS ===
+.ipynb_checkpoints/
+
+# === CACHE PYTHON ===
+__pycache__/
+*.py[cod]
+
+# === ENVIRONNEMENTS VIRTUELS ===
+env/
+.venv/
+ENV/
+.ENV/
+
+# === FICHIERS LOCAUX VS CODE ===
+*.code-workspace
+.vscode/
+
+# === AUTRES FICHIERS TEMPORAIRES ===
+.DS_Store
+*.log
+*.tmp

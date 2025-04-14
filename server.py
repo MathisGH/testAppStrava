@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, jsonify, send_file
+from flask import Flask, request, redirect, jsonify, send_file # type: ignore
 import requests
 import json
 import os
@@ -11,18 +11,16 @@ REDIRECT_URI = "https://testappstrava.onrender.com/callback"
 
 ATHLETES_FILE = "athletes.json"
 
-def load_athletes():
-    """ Charge les athlètes depuis le fichier JSON """
+def load_athletes(): # Charge les athlètes depuis le fichier JSON
     if os.path.exists(ATHLETES_FILE):
         with open(ATHLETES_FILE, "r") as f:
             return json.load(f)
     return {"athletes": {}}
 
-def save_athletes(data):
-    """ Sauvegarde les athlètes dans le fichier JSON """
+def save_athletes(data): # Sauvegarde les athlètes dans le fichier JSON
     with open(ATHLETES_FILE, "w") as f:
         json.dump(data, f, indent=4)
-    print("✅ Fichier athletes.json mis à jour")
+    print("Fichier athletes.json mis à jour")
 
 @app.route("/")
 def home():
@@ -37,7 +35,7 @@ def callback():
     """ Récupère le code d'autorisation et échange contre un token """
     code = request.args.get("code")
     if not code:
-        return "❌ Erreur : Aucun code reçu."
+        return "Erreur : Aucun code reçu."
 
     token_url = "https://www.strava.com/oauth/token"
     payload = {
@@ -50,7 +48,7 @@ def callback():
     response = requests.post(token_url, data=payload).json()
 
     if "access_token" not in response:
-        return "❌ Erreur : Impossible d'obtenir un token."
+        return "Erreur : Impossible d'obtenir un token."
 
     # Obtenir les infos de l'athlète
     access_token = response["access_token"]
@@ -71,7 +69,7 @@ def callback():
     data["athletes"][athlete_id] = athlete_info
     save_athletes(data)
 
-    return f"✅ {athlete_info['firstname']} {athlete_info['lastname']} ajouté avec succès !"
+    return f"{athlete_info['firstname']} {athlete_info['lastname']} ajouté avec succès !"
 
 @app.route("/athletes")
 def get_athletes():
