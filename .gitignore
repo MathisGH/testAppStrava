@@ -2,6 +2,7 @@
 athletes.json
 *.xlsx
 *.csv
+Data/
 
 # === JUPYTER NOTEBOOKS ===
 .ipynb_checkpoints/
