@@ -3,6 +3,8 @@ athletes.json
 *.xlsx
 *.csv
 Data/
+STRAVA_CLIENT_ID=152701
+STRAVA_CLIENT_SECRET=f9994d3d0eac0d314a1ee9c94ccb2dd674debb5d
 
 # === JUPYTER NOTEBOOKS ===
 .ipynb_checkpoints/

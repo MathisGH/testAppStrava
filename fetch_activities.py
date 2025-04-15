@@ -3,12 +3,17 @@ import pandas as pd
 import os
 import json
 import time
+from dotenv import load_dotenv
+load_dotenv()  # Charger les variables d'environnement depuis le fichier .env
 
 ATHLETES_FILE = "athletes.json" # JSON où seront stockées les infos des athlètes (id, nom, access et refresh token)
 DATA_FOLDER = "Data" # Où seront stockées les activités récupérées
 AUTH_URL = "https://www.strava.com/oauth/token" # URL pour rafraîchir le token d'accès
 ACTIVITIES_URL = "https://www.strava.com/api/v3/athlete/activities" # URL pour récupérer les activités de l'athlète
 ACTIVITY_DETAILS_URL = "https://www.strava.com/api/v3/activities/" # URL pour récupérer les détails d'une activité
+CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")
+CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET")
+
 
 os.makedirs(DATA_FOLDER, exist_ok=True)  # Créer le dossier si inexistant
 
@@ -22,8 +27,8 @@ def save_athletes(data): # Sauvegarde les athlètes dans le fichier JSON
 
 def refresh_token(athlete): # Rafraîchit le token d'accès
     payload = {
-        "client_id": "152701",
-        "client_secret": "f9994d3d0eac0d314a1ee9c94ccb2dd674debb5d",
+        "client_id": CLIENT_ID, # A remplacer par votre ID client Strava
+        "client_secret": CLIENT_SECRET, # A remplacer par votre token secret Strava
         "refresh_token": athlete["refresh_token"],
         "grant_type": "refresh_token"
     }
