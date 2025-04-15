@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import json
 import time
-from dotenv import load_dotenv
+from dotenv import load_dotenv # type: ignore
 load_dotenv()  # Charger les variables d'environnement depuis le fichier .env
 
 ATHLETES_FILE = "athletes.json" # JSON où seront stockées les infos des athlètes (id, nom, access et refresh token)
