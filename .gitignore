@@ -18,6 +18,7 @@ env/
 .venv/
 ENV/
 .ENV/
+.env
 
 # === FICHIERS LOCAUX VS CODE ===
 *.code-workspace
