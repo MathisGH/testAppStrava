@@ -2,11 +2,13 @@ from flask import Flask, request, redirect, jsonify, send_file # type: ignore
 import requests
 import json
 import os
+from dotenv import load_dotenv # type: ignore
+load_dotenv()  # Charger les variables d'environnement depuis le fichier .env
 
 app = Flask(__name__)
 
 CLIENT_ID = "152701"
-CLIENT_SECRET = "f9994d3d0eac0d314a1ee9c94ccb2dd674debb5d"
+CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET") # Token secret Strava à récupérer dans le dossier .env
 REDIRECT_URI = "https://testappstrava.onrender.com/callback"
 
 ATHLETES_FILE = "athletes.json"

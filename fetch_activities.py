@@ -11,9 +11,8 @@ DATA_FOLDER = "Data" # Où seront stockées les activités récupérées
 AUTH_URL = "https://www.strava.com/oauth/token" # URL pour rafraîchir le token d'accès
 ACTIVITIES_URL = "https://www.strava.com/api/v3/athlete/activities" # URL pour récupérer les activités de l'athlète
 ACTIVITY_DETAILS_URL = "https://www.strava.com/api/v3/activities/" # URL pour récupérer les détails d'une activité
-CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")
-CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET")
-
+CLIENT_ID = os.getenv("STRAVA_CLIENT_ID") # ID client Strava à récupérer dans le dossier .env
+CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET") # Token secret Strava à récupérer dans le dossier .env
 
 os.makedirs(DATA_FOLDER, exist_ok=True)  # Créer le dossier si inexistant
 
@@ -96,6 +95,8 @@ def fetch_activities(): # Fonction principale pour récupérer les activités de
         if detailed_activities:
             df_new = pd.DataFrame(detailed_activities)
             df_final = pd.concat([df_existing, df_new], ignore_index=True)
+            full_id = f"{athlete_id}_{athlete['firstname']}_{athlete['lastname']}"
+            df_final["athlete_id"] = full_id
             df_final.to_csv(file_path, index=False)
             print(f"{len(detailed_activities)} nouvelles activités enregistrées pour {athlete['firstname']}")
 

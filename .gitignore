@@ -1,5 +1,5 @@
 # === FICHIERS PERSONNELS ===
-athletes.json
+*.json
 *.xlsx
 *.csv
 Data/
