@@ -84,6 +84,6 @@ def download_athletes():
     """ Permet de télécharger le fichier athletes.json """
     return send_file(ATHLETES_FILE, as_attachment=True)
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Récupère le port de Render, sinon 5000 par défaut
-    app.run(host="0.0.0.0", port=port, debug=True)
+# if __name__ == "__main__":
+#     port = int(os.environ.get("PORT", 5000))  # Récupère le port de Render, sinon 5000 par défaut
+#     app.run(host="0.0.0.0", port=port, debug=True)
