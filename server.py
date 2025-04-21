@@ -2,7 +2,11 @@ from flask import Flask, request, redirect, jsonify, send_file # type: ignore
 import requests
 import json
 import os
+import pandas as pd
+import gspread
 from dotenv import load_dotenv # type: ignore
+from oauth2client.service_account import ServiceAccountCredentials
+
 load_dotenv()  # Charger les variables d'environnement depuis le fichier .env
 
 app = Flask(__name__)
@@ -12,6 +16,8 @@ CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET") # Token secret Strava à récu
 REDIRECT_URI = "https://testappstrava.onrender.com/callback"
 
 ATHLETES_FILE = "athletes.json"
+GOOGLE_SHEET_NAME = "Athletes Strava" # Nom de mon gsheet
+SERVICE_ACCOUNT_FILE = "google_service_account.json"  # Le fichier JSON avec les identifiants (google api...)
 
 def load_athletes(): # Charge les athlètes depuis le fichier JSON
     if os.path.exists(ATHLETES_FILE):
@@ -23,6 +29,32 @@ def save_athletes(data): # Sauvegarde les athlètes dans le fichier JSON
     with open(ATHLETES_FILE, "w") as f:
         json.dump(data, f, indent=4)
     print("Fichier athletes.json mis à jour")
+
+def save_to_google_sheets(athletes_data):
+    try:
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
+        client = gspread.authorize(creds)
+
+        sheet = client.open(GOOGLE_SHEET_NAME).sheet1
+        sheet.clear()
+
+        rows = []
+        for athlete_id, info in athletes_data["athletes"].items():
+            row = {
+                "id": athlete_id,
+                "firstname": info.get("firstname"),
+                "lastname": info.get("lastname"),
+                "access_token": info.get("access_token"),
+                "refresh_token": info.get("refresh_token")
+            }
+            rows.append(row)
+
+        df = pd.DataFrame(rows)
+        sheet.update([df.columns.values.tolist()] + df.values.tolist())
+        print("Données envoyées à Google Sheets")
+    except Exception as e:
+        print(f"Erreur lors de l'envoi à Google Sheets : {e}")
 
 @app.route("/")
 def home():
@@ -57,7 +89,7 @@ def callback():
     refresh_token = response["refresh_token"]
     athlete = requests.get("https://www.strava.com/api/v3/athlete", 
                            headers={"Authorization": f"Bearer {access_token}"}).json()
-    
+
     athlete_id = str(athlete["id"])
     athlete_info = {
         "firstname": athlete.get("firstname", "unknown"),
@@ -70,6 +102,9 @@ def callback():
     data = load_athletes()
     data["athletes"][athlete_id] = athlete_info
     save_athletes(data)
+
+    # Sauvegarde également dans Google Sheets
+    save_to_google_sheets(data)
 
     return f"{athlete_info['firstname']} {athlete_info['lastname']} ajouté avec succès !"
 
