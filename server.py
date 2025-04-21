@@ -19,7 +19,7 @@ REDIRECT_URI = "https://testappstrava.onrender.com/callback"
 
 ATHLETES_FILE = "athletes.json"
 GOOGLE_SHEET_NAME = "Athletes Strava" # Nom de mon gsheet
-SERVICE_ACCOUNT_FILE = "google_service_account.json"  # Le fichier JSON avec les identifiants (google api...)
+SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), "google_service_account.json") # Le fichier JSON avec les identifiants (google api...)
 
 def load_athletes(): # Charge les athlètes depuis le fichier JSON
     if os.path.exists(ATHLETES_FILE):
