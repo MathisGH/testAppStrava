@@ -6,6 +6,7 @@ import pandas as pd
 import gspread
 from dotenv import load_dotenv # type: ignore
 from oauth2client.service_account import ServiceAccountCredentials
+from io import StringIO
 
 load_dotenv()  # Charger les variables d'environnement depuis le fichier .env
 
@@ -14,12 +15,14 @@ app = Flask(__name__)
 CLIENT_ID = "152701"
 CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET") # Token secret Strava à récupérer dans le dossier .env
 REDIRECT_URI = "https://testappstrava.onrender.com/callback"
-# REDIRECT_URI = "http://localhost:5000/callback"
+# REDIRECT_URI = "http://localhost:5000/callback" # si je veux le run en local (+ rajouter dernière ligne avec le prot 5000)
 
 
 ATHLETES_FILE = "athletes.json"
 GOOGLE_SHEET_NAME = "Athletes Strava" # Nom de mon gsheet
-SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), "google_service_account.json") # Le fichier JSON avec les identifiants (google api...)
+SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT") # On va chercher le contenu du json dans les variables d'environnement Render
+creds_dict = json.loads(SERVICE_ACCOUNT_JSON)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 
 def load_athletes(): # Charge les athlètes depuis le fichier JSON
     if os.path.exists(ATHLETES_FILE):
