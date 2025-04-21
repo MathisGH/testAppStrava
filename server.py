@@ -14,6 +14,8 @@ app = Flask(__name__)
 CLIENT_ID = "152701"
 CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET") # Token secret Strava à récupérer dans le dossier .env
 REDIRECT_URI = "https://testappstrava.onrender.com/callback"
+# REDIRECT_URI = "http://localhost:5000/callback"
+
 
 ATHLETES_FILE = "athletes.json"
 GOOGLE_SHEET_NAME = "Athletes Strava" # Nom de mon gsheet
@@ -32,13 +34,16 @@ def save_athletes(data): # Sauvegarde les athlètes dans le fichier JSON
 
 def save_to_google_sheets(athletes_data):
     try:
+        print("Connexion à Google Sheets...")
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
         client = gspread.authorize(creds)
 
+        print("Ouverture de la feuille...")
         sheet = client.open(GOOGLE_SHEET_NAME).sheet1
         sheet.clear()
 
+        print("Préparation des données...")
         rows = []
         for athlete_id, info in athletes_data["athletes"].items():
             row = {
@@ -51,10 +56,13 @@ def save_to_google_sheets(athletes_data):
             rows.append(row)
 
         df = pd.DataFrame(rows)
+        print("Mise à jour de la feuille...")
         sheet.update([df.columns.values.tolist()] + df.values.tolist())
+
         print("Données envoyées à Google Sheets")
     except Exception as e:
         print(f"Erreur lors de l'envoi à Google Sheets : {e}")
+
 
 @app.route("/")
 def home():
