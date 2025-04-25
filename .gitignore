@@ -1,4 +1,4 @@
-# === FICHIERS PERSONNELS ===
+# === PERSONNAL FILES ===
 *.json
 *.xlsx
 *.csv
@@ -7,22 +7,22 @@ Data/
 # === JUPYTER NOTEBOOKS ===
 .ipynb_checkpoints/
 
-# === CACHE PYTHON ===
+# === PYTHON CACHE ===
 __pycache__/
 *.py[cod]
 
-# === ENVIRONNEMENTS VIRTUELS ===
+# === VIRTUAL ENVIRONNEMENTS ===
 env/
 .venv/
 ENV/
 .ENV/
 .env
 
-# === FICHIERS LOCAUX VS CODE ===
+# === LOCAL FILES FOR VS CODE ===
 *.code-workspace
 .vscode/
 
-# === AUTRES FICHIERS TEMPORAIRES ===
+# === OTHER TEMPORARY FILES ===
 .DS_Store
 *.log
 *.tmp

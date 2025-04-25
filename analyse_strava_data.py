@@ -2,7 +2,6 @@ import pandas as pd
 import os
 
 folder = "Data"
-df = pd.concat([pd.read_csv(os.path.join(folder, f)) for f in os.listdir(folder) if f.endswith(".csv")], ignore_index=True) # Concat toutes les data dans un seul df
+df = pd.concat([pd.read_csv(os.path.join(folder, f)) for f in os.listdir(folder) if f.endswith(".csv")], ignore_index=True) # Concat everything data in a single df
 
-print(df.head())
-print(df.columns)
+### WORK IN PROGRESS ###
