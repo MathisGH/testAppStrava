@@ -57,7 +57,7 @@ def home():
         f"&redirect_uri={REDIRECT_URI}&response_type=code"
         f"&approval_prompt=force&scope=activity:read_all"
     )
-    return f"<h2>Autorize the access to your Strava account :</h2><a href='{auth_url}'>Click here</a>"
+    return f"<h2>Authorize the access to your Strava account :</h2><a href='{auth_url}'>Click here</a>"
 
 
 @app.route("/callback")
