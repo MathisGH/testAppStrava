@@ -2,7 +2,8 @@
 *.json
 *.xlsx
 *.csv
-Data/
+data/
+google_service_account.json
 
 # === JUPYTER NOTEBOOKS ===
 .ipynb_checkpoints/

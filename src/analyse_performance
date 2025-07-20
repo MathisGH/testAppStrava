@@ -1,0 +1,66 @@
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import shap
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / "Data" / "processed" / "df_athletes_stats.csv"
+df = pd.read_csv(DATA_PATH)
+
+target = "VDOT_max"
+exclude_cols = ["athlete_id", "VDOT_5km", "VDOT_10km", "VDOT_21km", "VDOT_42km", "VDOT_max", 
+                "5km PB", "10km PB", "21km PB", "42km PB", "FC Max"]
+features = [col for col in df.columns if col not in exclude_cols]
+
+X = df[features]
+y = df[target]
+
+# Standardisation
+scaler = StandardScaler()
+X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+
+# On test avec un modèle rf pour le moment
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+model = RandomForestRegressor(n_estimators=200, random_state=42)
+model.fit(X_train, y_train)
+
+# feature importance
+importances = pd.Series(model.feature_importances_, index=X.columns)
+importances.sort_values(ascending=False).plot(kind='bar', figsize=(10, 4), title="Feature Importance")
+plt.tight_layout()
+plt.show()
+
+# interprétation avec SHAP
+explainer = shap.Explainer(model, X_train)
+shap_values = explainer(X_test)
+
+shap.plots.bar(shap_values)
+
+# recommandations personnalisées
+def get_recommendation(i, X_scaled, shap_values, df_original):
+    athlete = df_original.iloc[i]
+    athlete_features = X_scaled.iloc[i]
+    shap_athlete = shap_values[i]
+
+    top_features = np.argsort(-np.abs(shap_athlete.values))[:3]
+    recommendations = []
+
+    for idx in top_features:
+        feature_name = X_scaled.columns[idx]
+        shap_val = shap_athlete.values[idx]
+        direction = "augmenter" if shap_val < 0 else "maintenir"
+        value = athlete[feature_name]
+        recommendations.append(f"{feature_name} ({value:.2f}) : il serait bénéfique de {direction} cette variable")
+
+    print(f"\nRecommandations pour l'athlète {athlete['athlete_id']}:")
+    print(f"VDOT actuel : {athlete['VDOT_max']:.2f}")
+    for reco in recommendations:
+        print(reco)
+
+for i in [0, 1, 2]:
+    get_recommendation(i, X_test.reset_index(drop=True), shap_values, df[df.index.isin(X_test.index)].reset_index(drop=True))

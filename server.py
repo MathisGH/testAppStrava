@@ -99,7 +99,7 @@ def callback():
     return f"{athlete_info['firstname']} {athlete_info['lastname']} added with success !"
 
 
-# If you want to execute the code in local
+# to execute the code in local
 # if __name__ == "__main__":
 #     port = int(os.environ.get("PORT", 5000))
 #     app.run(host="0.0.0.0", port=port, debug=True)
