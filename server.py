@@ -2,9 +2,9 @@ from flask import Flask, request, redirect, jsonify  # type: ignore
 import requests
 import json
 import os
-import gspread
+import gspread # type: ignore
 from dotenv import load_dotenv  # type: ignore
-from oauth2client.service_account import ServiceAccountCredentials
+from oauth2client.service_account import ServiceAccountCredentials # type: ignore
 
 load_dotenv() # Load environment variables from .env file
 
