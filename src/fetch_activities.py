@@ -7,7 +7,7 @@ from dotenv import load_dotenv # type: ignore
 load_dotenv()  # Charger les variables d'environnement depuis le fichier .env
 
 ATHLETES_FILE = "athletes.json" # JSON où seront stockées les infos des athlètes (id, nom, access et refresh token)
-DATA_FOLDER = "Data" # Où seront stockées les activités récupérées
+DATA_FOLDER = "../data/raw" # Où seront stockées les activités récupérées
 AUTH_URL = "https://www.strava.com/oauth/token" # URL in order to refresh the access token
 ACTIVITIES_URL = "https://www.strava.com/api/v3/athlete/activities" # URL in order to fetch activities from an athlete
 ACTIVITY_DETAILS_URL = "https://www.strava.com/api/v3/activities/" # URL in order to fetch the details of an activity
