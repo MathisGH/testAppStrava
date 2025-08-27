@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
 def load_data(filepath: Path) -> pd.DataFrame:
-    """Load all CSV files from the given directory into a single DataFrame."""
+    """Load all CSV files from the given directory into a single DataFrame"""
     df = pd.concat(
         [pd.read_csv(os.path.join(filepath, f)) for f in os.listdir(filepath) if f.endswith(".csv")],
         ignore_index=True
@@ -18,7 +18,7 @@ def load_data(filepath: Path) -> pd.DataFrame:
 
 
 def clean_activities(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Clean and preprocess the main activity DataFrame, including cumulative distances and splits."""
+    """Clean and preprocess the main activity DataFrame, including cumulative distances and splits"""
     keep_cols = [
         'athlete', 'distance', 'moving_time', 'total_elevation_gain', 'sport_type', 'id',
         'start_date', 'average_speed', 'max_speed', 'average_watts', 'average_heartrate',
@@ -82,7 +82,7 @@ def clean_activities(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def process_best_efforts(df: pd.DataFrame, df_splits_metric: pd.DataFrame) -> pd.DataFrame:
-    """Extract and process best effort data and integrate with cleaned splits."""
+    """Extract and process best effort data and integrate with cleaned splits"""
     df['best_efforts'] = df['best_efforts'].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
     df_efforts = df[df['best_efforts'].apply(lambda x: isinstance(x, list) and len(x) > 0)].copy()
     df_best_efforts = df_efforts.explode("best_efforts").reset_index(drop=True)
@@ -169,7 +169,7 @@ def process_best_efforts(df: pd.DataFrame, df_splits_metric: pd.DataFrame) -> pd
 
 
 def save_outputs(df_clean: pd.DataFrame, df_best: pd.DataFrame, output_dir: Path):
-    """Save cleaned data to CSV files."""
+    """Save cleaned data to CSV files"""
     output_dir.mkdir(parents=True, exist_ok=True)
     df_clean.to_csv(output_dir / "df_clean.csv", index=False)
     df_best.to_csv(output_dir / "df_best_efforts.csv", index=False)
