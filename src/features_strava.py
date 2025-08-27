@@ -11,7 +11,7 @@ def extract_best_effort_time(df_best_efforts, distance_km):
     )
 
 def calculate_vdot(distance_m, time_sec):
-    """Estimate VDOT score based on distance and time."""
+    """Estimate VDOT score based on distance and time"""
     time_min = time_sec / 60
     if time_min == 0:
         return None
@@ -23,8 +23,8 @@ def calculate_vdot(distance_m, time_sec):
 
 def process_splits(splits_df, fc_max_dict):
     """
-    Analyze split-level heart rate and speed variability.
-    Returns a DataFrame with cv_speed and HR zone % per activity.
+    Analyze split-level heart rate and speed variability
+    Returns a DataFrame with cv_speed and HR zone % per activity
     """
     splits_df = splits_df.copy()
 
