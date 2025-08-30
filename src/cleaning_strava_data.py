@@ -4,6 +4,13 @@ import os
 import ast
 import warnings
 from pathlib import Path
+from dotenv import load_dotenv # type: ignore
+load_dotenv()  # Charger les variables d'environnement depuis le fichier .env
+from sqlalchemy import create_engine
+
+password_sql = os.getenv("POSTGRES_PASSWORD")
+
+engine = create_engine(f"postgresql://postgres:{password_sql}@localhost:5432/strava_db")
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -183,5 +190,8 @@ if __name__ == "__main__":
     df_raw = load_data(DATA_PATH)
     df_clean, df_splits_metric = clean_activities(df_raw)
     df_best_efforts, df_final = process_best_efforts(df_clean, df_splits_metric)
+    df_clean.to_sql("activities_clean", engine, if_exists="replace", index=False)
+    df_best_efforts.to_sql("best_efforts", engine, if_exists="replace", index=False)
+
     save_outputs(df_clean, df_best_efforts, df_final, OUTPUT_PATH)
 
