@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 
 password_sql = os.getenv("POSTGRES_PASSWORD")
 
-engine = create_engine(f"postgresql://postgres:{password_sql}@localhost:5432/strava_db")
+# engine = create_engine(f"postgresql://postgres:{password_sql}@localhost:5432/strava_db") # for GCP
 
 def extract_best_effort_time(df_best_efforts, distance_km):
     return (
@@ -165,6 +165,6 @@ if __name__ == "__main__":
     for sport, df_sport in dfs_by_sport.items():
         df_sport.to_csv(DATA_DIR / 'activities_by_sport' / f"df_activities_{sport.lower()}.csv", index=False)
     
-    df_clean_enriched.to_sql("activities_enriched", engine, if_exists="replace", index=False)
+     # df_clean_enriched.to_sql("activities_enriched", engine, if_exists="replace", index=False) # for GCP
 
     print("Feature extraction complete")
