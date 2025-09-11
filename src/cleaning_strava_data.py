@@ -68,10 +68,12 @@ def clean_activities(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     # Compute cumulative distance by sport
     def cumulative_distance(df, sport):
+        mask = df['sport_type'] == sport
         return (
-            df.groupby('athlete_id', group_keys=False)
-            .apply(lambda x: x.loc[x['sport_type'] == sport, 'distance_activity'].cumsum())
+            df.groupby('athlete_id')['distance_activity']
+            .transform(lambda x: x.where(mask).cumsum())
         )
+
 
     df['cumulative_distance_run'] = cumulative_distance(df, 'Run')
     df['cumulative_distance_ride'] = cumulative_distance(df, 'Ride')
