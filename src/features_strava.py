@@ -82,7 +82,7 @@ def generate_athlete_stats(df_clean, df_best_efforts, manual_stats_path):
     for k, v in distances.items():
         df_athletes_stats[k] = df_athletes_stats['athlete_id'].map(v)
 
-    # FC Max à partir de df_clean
+    # FC Max from df_clean
     fc_valid = df_clean[df_clean['max_heartrate_activity'] < 210]
     fc_max = fc_valid.groupby('athlete_id')['max_heartrate_activity'].apply(lambda x: x.nlargest(10).mean())
     df_athletes_stats['FC Max'] = df_athletes_stats['athlete_id'].map(fc_max)
