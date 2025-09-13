@@ -133,7 +133,7 @@ def process_best_efforts(df: pd.DataFrame, df_splits_metric: pd.DataFrame) -> tu
 
     df_best_efforts = df_best_efforts.dropna(subset=['pr_rank'])
     keep_cols_best_efforts = [
-        'distance_activity', 'moving_time_activity', 'sport_type',
+        'distance_activity', 'moving_time_activity', 'elevation_gain_activity', 'sport_type',
         'activity_id', 'athlete_id', 'id', 'best_effort_name', 'moving_time',
         'start_date', 'distance_best_effort', 'pr_rank'
     ]
@@ -177,11 +177,11 @@ def process_best_efforts(df: pd.DataFrame, df_splits_metric: pd.DataFrame) -> tu
     return df_best_efforts, df_final
 
 
-def save_outputs(df_clean: pd.DataFrame, df_best: pd.DataFrame, df_final: pd.DataFrame, output_dir: Path):
+def save_outputs(df_clean: pd.DataFrame, df_best_efforts: pd.DataFrame, df_final: pd.DataFrame, output_dir: Path):
     """Save cleaned data to CSV files"""
     output_dir.mkdir(parents=True, exist_ok=True)
     df_clean.to_csv(output_dir / "df_clean.csv", index=False)
-    df_best.to_csv(output_dir / "df_best_efforts.csv", index=False)
+    df_best_efforts.to_csv(output_dir / "df_best_efforts.csv", index=False)
     df_final.to_csv(output_dir / "df_final.csv", index=False)
 
 

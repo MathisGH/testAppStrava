@@ -24,26 +24,32 @@ View on Strava: https://www.strava.com/activities/{activity_id}
 
 
 
-# Files (.csv) we are using in each repository:
-- data
--> athletes_token : id, firstname, lastname, access_token, refresh_token
--> manual_stats : athlete_id, total_distance_run/ride/swim, FC max, 5k/10k/21k/42k PBs, Nb_activities_run/ride/swim/workout
+# Files (.csv) used in the repository
 
---- processed
----> df_activites_agg : athlete_id, activity_id, start_date, cv_speed, pct_Z1, pct_Z2, pct_Z3, pct_Z4, sport_type, distance, moving_time, intensity, training_load
+## Data
+- **athletes_token**: contains athletes’ authentication tokens  
+  Columns: `id`, `firstname`, `lastname`, `access_token`, `refresh_token`
 
----> df_athletes_stats : athlete_id, total_distance_run/ride/swim, FC max, 5k/10k/21k/42k PBs and VDOT and VDOT_max, Nb_activities_run/ride/swim/workout/total
+- **manual_stats**: contains manually entered stats for each athlete  
+  Columns: `athlete_id`, `total_distance_run`, `total_distance_ride`, `total_distance_swim`, `FC_max`, `PB_5k`, `PB_10k`, `PB_21k`, `PB_42k`, `Nb_activities_run`, `Nb_activities_ride`, `Nb_activities_swim`, `Nb_activities_workout`
 
----> df_best_efforts : distance_activity, moving_time_activity, sport_type, activity_id, athlete_id, id, best_effort_name, moving_time, start_date, distance_best_effort, pr_rank
+---
 
----> df_clean : distance_activity, moving_time_activity, elevation_gain_activity, sport_type, activity_id, start_date, average_watts_activity, average_heartrate_activity,           ________________max_heartrate_activity, athlete_id, max_watts_activity, weighted_average_watts_activity, average_speed_km_h_activity, max_speed_km_h_activity, ________________cumulative_distance_run, cumulative_distance_ride, cumulative_distance_swim
+## Processed (4 main files)
 
----> df_clean_enriched : distance, moving_time, sport_type, activity_id, start_date, average_heartrate, athlete_id, average_speed_km_h, cv_speed, pct_Z1, pct_Z2, pct_Z3, pct_Z4
+- **athletes_summary**: contains aggregated statistics for each athlete  
+  Columns: `athlete_id`, `Nb_activities_run`, `Nb_activities_ride`, `Nb_activities_swim`, `Nb_activities_workout`, `Total_distance_run`, `Total_distance_ride`, `Total_distance_swim`, `FC_max`, `PB_5km`, `PB_10km`, `PB_21.1km`, `PB_42.2km`, `Nb_activities`, `VDOT_5km`, `VDOT_10km`, `VDOT_21.1km`, `VDOT_42.2km`, `VDOT_max`
 
----> df_final : distance, moving_time, sport_type, activity_id, start_date, average_heartrate, athlete_id, average_speed_km_h
+- **best_efforts**: contains the personal bests (PBs) of each athlete for different distances  
+  Columns: `distance_activity`, `moving_time_activity`, `elevation_gain_activity`, `sport_type`, `activity_id`, `athlete_id`, `id`, `best_effort_name`, `moving_time`, `start_date`, `distance_best_effort`, `pr_rank`
 
------ activities_by_sport
------> stats for every activities for each sport type...
+- **activity_splits**: contains every split of every activity for every athlete  
+  Columns: `distance_activity`, `moving_time_activity`, `elevation_gain_activity`, `sport_type`, `activity_id`, `start_date`, `average_watts_activity`, `average_heartrate_activity`, `max_heartrate_activity`, `athlete_id`, `max_watts_activity`, `weighted_average_watts_activity`, `average_speed_km_h_activity`, `max_speed_km_h_activity`, `cumulative_distance_run`, `cumulative_distance_ride`, `cumulative_distance_swim`, `distance_split`, `moving_time_split`, `average_speed_split`, `average_heartrate_split`, `average_speed_km_h_split`
 
---- raw
----> activities_123456789_firstname_lastname : everything about every activity for each athlete
+- **activities_master**: contains every activity of every athlete, with added features used for analysis  
+  Columns: `distance_activity`, `moving_time_activity`, `elevation_gain_activity`, `sport_type`, `activity_id`, `start_date`, `average_watts_activity`, `average_heartrate_activity`, `max_heartrate_activity`, `athlete_id`, `max_watts_activity`, `weighted_average_watts_activity`, `average_speed_km_h_activity`, `max_speed_km_h_activity`, `cumulative_distance_run`, `cumulative_distance_ride`, `cumulative_distance_swim`, `cv_speed`, `pct_Z1`, `pct_Z2`, `pct_Z3`, `pct_Z4`, `intensity`, `training_load`
+
+---
+
+## Raw
+- **activities_<athlete_id>_<firstname>_<lastname>**: contains all raw data of every activity for each athlete
