@@ -2,7 +2,7 @@ import pandas as pd
 import json
 
 # Load the Google Sheet CSV (here we assume it's already downloaded as a CSV file from Google Sheets, named "Athletes Strava.csv"
-df = pd.read_csv("../data/Athletes Strava.csv")
+df = pd.read_csv("../data/athletes_token.csv")
 
 # Build the dictionary of athletes
 athletes = {}
