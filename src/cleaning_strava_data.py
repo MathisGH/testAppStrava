@@ -31,7 +31,7 @@ def clean_activities(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         'athlete', 'distance', 'moving_time', 'total_elevation_gain', 'sport_type', 'id',
         'start_date', 'average_speed', 'max_speed', 'average_watts', 'average_heartrate',
         'max_heartrate', 'splits_metric', 'best_efforts', 'athlete_id',
-        'max_watts', 'weighted_average_watts'
+        'max_watts', 'weighted_average_watts', 'start_latlng'
     ]
     df = df[keep_cols]
 

@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 from dotenv import load_dotenv # type: ignore
 from sqlalchemy import create_engine
+import requests
 
 # --- CONFIGURATION & INITIALIZATION ---
 load_dotenv()  # Load environment variables from .env file
@@ -34,7 +35,7 @@ def clean_activities(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         'athlete', 'distance', 'moving_time', 'total_elevation_gain', 'sport_type', 'id',
         'start_date', 'average_speed', 'max_speed', 'average_watts', 'average_heartrate',
         'max_heartrate', 'splits_metric', 'best_efforts', 'athlete_id',
-        'max_watts', 'weighted_average_watts'
+        'max_watts', 'weighted_average_watts', 'start_latlng'
     ]
     df = df[keep_cols]
 
@@ -147,6 +148,62 @@ def process_best_efforts(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     ], errors='ignore')
 
     return df_best_efforts, df_splits_metric
+
+# --- ADDING WEATHER DATA USING OPEN METEO API ---
+
+def get_weather_for_activity(activity_row):
+    """
+    Fetch weather data for a given activity using Open-Meteo API
+    Every activity_row must have 'start_date' (datetime) and 'start_latlng' (string like '[lat, lon]')
+    """
+    # 1. Extract latitude and longitude
+    try:
+        coords = ast.literal_eval(activity_row["start_latlng"])
+        lat, lon = coords[0], coords[1]
+    except (ValueError, SyntaxError, TypeError, IndexError):
+        return pd.Series({'temperature': None, 'humidity': None, 'apparent_temperature': None, 'precipitation': None, 'wind_speed': None})
+    
+    # Ensure start_date is datetime
+    activity_date = pd.to_datetime(activity_row['start_date'])
+
+    # 2. Prepare API request
+    API_URL = "https://archive-api.open-meteo.com/v1/archive"
+    params = {
+        'latitude': lat,
+        'longitude': lon,
+        'start_date': activity_date.strftime('%Y-%m-%d'),
+        'end_date': activity_date.strftime('%Y-%m-%d'),
+        'hourly': 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,windspeed_10m',
+        'timezone': 'auto'
+    }
+
+    # 3. Call the API
+    try:
+        response = requests.get(API_URL, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        hourly_data = data['hourly']
+        activity_hour_index = activity_date.hour
+
+        temp = hourly_data['temperature_2m'][activity_hour_index]
+        humidity = hourly_data['relative_humidity_2m'][activity_hour_index]
+        apparent_temp = hourly_data['apparent_temperature'][activity_hour_index]
+        precip = hourly_data['precipitation'][activity_hour_index]
+        wind = hourly_data['windspeed_10m'][activity_hour_index]
+
+        return pd.Series({
+            'temperature': temp, 
+            'humidity': humidity, 
+            'apparent_temperature': apparent_temp, 
+            'precipitation': precip, 
+            'wind_speed': wind
+        })
+    except requests.exceptions.RequestException as e:
+        print(f"Erreur API pour l'activité {activity_row.get('activity_id', 'unknown')}: {e}")
+        return pd.Series({'temperature': None, 'humidity': None, 'apparent_temperature': None, 'precipitation': None, 'wind_speed': None})
+
+
 
 # --- FEATURE ENGINEERING FUNCTIONS ---
 
@@ -294,8 +351,14 @@ if __name__ == "__main__":
     df_master['cv_speed'].fillna(0, inplace=True)
     df_master.drop(columns=['splits_metric', 'best_efforts'], inplace=True)
 
-    # --- 5. SAVE THE 4 FINAL FILES ---
-    print("Step 5: Saving final files...")
+    # --- 5. ADD WEATHER DATA ---
+    print("Step 5: Fetching weather daata...")
+    df_master['start_date'] = pd.to_datetime(df_master['start_date'])
+    weather_data = df_master.apply(get_weather_for_activity, axis=1)
+    df_master = pd.concat([df_master, weather_data], axis=1)
+
+    # --- 6. SAVE THE 4 FINAL FILES ---
+    print("Step 6: Saving final files...")
     
     df_athletes_summary.to_csv(OUTPUT_PATH / "athletes_summary.csv", index=False)
     df_best_efforts.to_csv(OUTPUT_PATH / "best_efforts.csv", index=False)
@@ -307,5 +370,5 @@ if __name__ == "__main__":
     # df_athletes_summary.to_sql("athletes_summary", engine, if_exists="replace", index=False)
     # df_best_efforts.to_sql("best_efforts", engine, if_exists="replace", index=False)
 
-    print("Feature engineering pipeline completed successfully!")
+    print("Pipeline completed successfully!")
     print(f"Files saved in: {OUTPUT_PATH}")
