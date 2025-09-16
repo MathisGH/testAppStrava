@@ -11,15 +11,15 @@ View on Strava: https://www.strava.com/activities/{activity_id}
 ## Overview
 - 'server.py': Flask app for Strava authentification and token storage
 - 'fetch_activities.py': Dowloads all Strava activities for every athlete in athletes.json
+- 'build_features.py': Cleaning and feature engineering
 - 'csv_to_json.py': Converts the CSV file from Google Sheet to a JSON file
-- 'notebook_strava.ipynb': Notebook for EDA
 - More coming soon...
 
 ## Training analysis
 - Data engineering: creating new variables like activity intensity and training load
 - Clustering: group training sessions based on heart rate zones, speed variability, and intensity
 - Training load estimation: analyze effort levels to identify risks of overtraining or injury
-- Performance prediction: use machine learning (e.g., Random Forest) to estimate personal bests
+- Performance prediction: use machine learning to estimate personal bests (in progress)
 - More coming soon...
 
 
@@ -47,7 +47,8 @@ View on Strava: https://www.strava.com/activities/{activity_id}
   Columns: `distance_activity`, `moving_time_activity`, `elevation_gain_activity`, `sport_type`, `activity_id`, `start_date`, `average_watts_activity`, `average_heartrate_activity`, `max_heartrate_activity`, `athlete_id`, `max_watts_activity`, `weighted_average_watts_activity`, `average_speed_km_h_activity`, `max_speed_km_h_activity`, `cumulative_distance_run`, `cumulative_distance_ride`, `cumulative_distance_swim`, `distance_split`, `moving_time_split`, `average_speed_split`, `average_heartrate_split`, `average_speed_km_h_split`
 
 - **activities_master**: contains every activity of every athlete, with added features used for analysis  
-  Columns: `distance_activity`, `moving_time_activity`, `elevation_gain_activity`, `sport_type`, `activity_id`, `start_date`, `average_watts_activity`, `average_heartrate_activity`, `max_heartrate_activity`, `athlete_id`, `max_watts_activity`, `weighted_average_watts_activity`, `average_speed_km_h_activity`, `max_speed_km_h_activity`, `cumulative_distance_run`, `cumulative_distance_ride`, `cumulative_distance_swim`, `cv_speed`, `pct_Z1`, `pct_Z2`, `pct_Z3`, `pct_Z4`, `intensity`, `training_load`
+  Columns: `distance_activity`, `moving_time_activity`, `elevation_gain_activity`, `sport_type`, `activity_id`, `start_date`, `average_watts_activity`, `average_heartrate_activity`, `max_heartrate_activity`, `athlete_id`, `max_watts_activity`, `weighted_average_watts_activity`, `average_speed_km_h_activity`, `max_speed_km_h_activity`, `cumulative_distance_run`, `cumulative_distance_ride`, `cumulative_distance_swim`, `cv_speed`, `pct_Z1`, `pct_Z2`, `pct_Z3`, `pct_Z4`, `intensity`, `training_load`,
+  `temperature`, `humidity`, `apparent_temperature`, `precipitation`, `wind_speed`
 
 ---
 
