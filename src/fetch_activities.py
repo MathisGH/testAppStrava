@@ -77,7 +77,7 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
             print(f"Page {request_page_num} fetched: ({len(new_data)} new activities)")
 
             # Stop the loop if we reach the quota and wait 15 minutes
-            if request_page_num % 100 == 0:
+            if request_page_num % 290 == 0:
                 print("API limit reached, sleeping 15 minutes...")
                 time.sleep(900)
 
