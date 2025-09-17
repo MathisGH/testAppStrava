@@ -13,7 +13,7 @@ import requests
 load_dotenv()  # Load environment variables from .env file
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-password_sql = os.getenv("POSTGRES_PASSWORD")
+# password_sql = os.getenv("POSTGRES_PASSWORD")
 # For GCP
 # engine = create_engine(f"postgresql://postgres:{password_sql}@localhost:5432/strava_db")
 
@@ -78,7 +78,6 @@ def clean_activities(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
             .cumsum()
             .reindex(df.index)
         )
-
 
     df['cumulative_distance_run'] = cumulative_distance(df, 'Run')
     df['cumulative_distance_ride'] = cumulative_distance(df, 'Ride')
@@ -343,11 +342,30 @@ if __name__ == "__main__":
     df_master = pd.merge(df_clean, df_split_features, on="activity_id", how="left")
 
     # c) Calculate final features directly on the master table (training load)
-    df_master['intensity'] = (df_master["pct_Z1"].fillna(0) * 1 +
-                                df_master["pct_Z2"].fillna(0) * 1.5 +
-                                df_master["pct_Z3"].fillna(0) * 2.25 +
-                                df_master["pct_Z4"].fillna(0) * 3)
-    df_master['training_load'] = df_master['intensity'] * (df_master['distance_activity'] / 1000)
+    # This method is inspired by the TRIMP by zones method (I choose to ignore the classic TRIMP method as it requires the resting heart rate and the gender which we don't have)
+    df_master['hr_intensity'] = (
+        df_master["pct_Z1"].fillna(0) * 1 +
+        df_master["pct_Z2"].fillna(0) * 2 +
+        df_master["pct_Z3"].fillna(0) * 3 +
+        df_master["pct_Z4"].fillna(0) * 4
+    )
+    df_master['training_load'] = df_master['hr_intensity'] * ((df_master['distance_activity'] + df_master['elevation_gain_activity'] * 10) / 100)  # I found this way in order to include elevation gain in the training load calculation, the x10 factor is arbitrary and can be adjusted
+
+    # We will also use the ACWR (Acute Chronic Workload Ratio, different sources: Lolli et al., Griffin et al., Gabbett) concept to calculate a fatigue index: the ratio of the last 7 days of training load to the last 28 days
+    # ACWR -> 
+    # Below 0.8 = undertraining
+    # 0.8 to 1.3 = optimal zone
+    # Above 1.5 = overtraining, risk of injury increases considerably (Gabbett, 2018)
+
+    def ewma_load(x, span): # Use of the EWMA method to calculate the acute and chronic load -> it gives more weight to recent activities and is, therefore, more accurate (https://www.researchgate.net/publication/311860780_Calculating_acute_Chronic_workload_ratios_using_exponentially_weighted_moving_averages_provides_a_more_sensitive_indicator_of_injury_likelihood_than_rolling_averages#:~:text=The%20variance%20(R(2)),injury%20risk%20with%20higher%20ACWR.)
+        return x.ewm(span=span, min_periods=1).mean()
+
+    df_master['acute_load'] = df_master.groupby("athlete_id")['training_load'].transform(lambda x: ewma_load(x, span=7))     # Acute load = sum of last 7 days
+    df_master['chronic_load'] = chronic = df_master.groupby("athlete_id")['training_load'].transform(lambda x: ewma_load(x, span=28))    # Chronic load = weekly average over the last 28 days
+    df_master['acwr'] = df_master['acute_load'] / df_master['chronic_load']
+
+    df_master.drop(columns=['acute_load', 'chronic_load', 'hr_intensity'], inplace=True)
+
     df_master['cv_speed'].fillna(0, inplace=True)
     df_master.drop(columns=['splits_metric', 'best_efforts'], inplace=True)
 
@@ -356,6 +374,7 @@ if __name__ == "__main__":
     df_master['start_date'] = pd.to_datetime(df_master['start_date'])
     weather_data = df_master.apply(get_weather_for_activity, axis=1)
     df_master = pd.concat([df_master, weather_data], axis=1)
+    df_master.drop(columns=['start_latlng'], inplace=True)
 
     # --- 6. SAVE THE 4 FINAL FILES ---
     print("Step 6: Saving final files...")
