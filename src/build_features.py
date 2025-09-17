@@ -13,7 +13,7 @@ import requests
 load_dotenv()  # Load environment variables from .env file
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-# password_sql = os.getenv("POSTGRES_PASSWORD")
+password_sql = os.getenv("POSTGRES_PASSWORD")
 # For GCP
 # engine = create_engine(f"postgresql://postgres:{password_sql}@localhost:5432/strava_db")
 
@@ -78,6 +78,7 @@ def clean_activities(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
             .cumsum()
             .reindex(df.index)
         )
+
 
     df['cumulative_distance_run'] = cumulative_distance(df, 'Run')
     df['cumulative_distance_ride'] = cumulative_distance(df, 'Ride')
@@ -322,72 +323,96 @@ if __name__ == "__main__":
     print("Step 1: Loading raw data...")
     df_raw = load_data(DATA_PATH)
 
-    # --- 2. CLEANING & BASIC DATA EXTRACTION ---
-    print("Step 2: Cleaning activities and processing best efforts...")
-    df_clean, _ = clean_activities(df_raw.copy())
-    df_best_efforts, df_activity_splits = process_best_efforts(df_raw.copy())
+    # --- 2. LOAD EXISTING PROCESSED DATA (IF ANY) ---
+    print("Step 2: Checking for existing processed data...")
+    existing_master_path = OUTPUT_PATH / "activities_master.csv"
+    if existing_master_path.exists():
+        df_master_existing = pd.read_csv(existing_master_path, parse_dates=["start_date"])
+        processed_ids = set(df_master_existing["activity_id"].unique())
+        print(f"Found {len(processed_ids)} activities already processed")
+    else:
+        df_master_existing = pd.DataFrame()
+        processed_ids = set()
 
-    # --- 3. GENERATE ATHLETE SUMMARY TABLE ---
-    print("Step 3: Generating athlete summary statistics...")
-    df_athletes_summary = generate_athlete_stats(df_clean, df_best_efforts, MANUAL_STATS_PATH)
+    # --- 3. FILTER NEW ACTIVITIES ---
+    df_new = df_raw[~df_raw["id"].isin(processed_ids)].copy()
+    print(f"Found {len(df_new)} new activities to process")
 
-    # --- 4. Enrichment of the activity table to create the master table ---
-    print("Step 4: Creating the 'activities_master' table...")
-    
+    if df_new.empty:
+        print("No new activities detected -> Pipeline finished")
+        exit(0)
+
+    # --- 4. CLEANING & BASIC DATA EXTRACTION ---
+    print("Step 3: Cleaning activities and processing best efforts...")
+    df_clean, _ = clean_activities(df_new.copy())
+    df_best_efforts, df_activity_splits = process_best_efforts(df_new.copy())
+
+    # --- 5. GENERATE ATHLETE SUMMARY TABLE ---
+    print("Step 4: Generating athlete summary statistics...")
+    df_athletes_summary_new = generate_athlete_stats(df_clean, df_best_efforts, MANUAL_STATS_PATH)
+
+    # --- 6. CREATE/UPDATE MASTER TABLE ---
+    print("Step 5: Creating the 'activities_master' table for new activities...")
+
     # a) Create activity-level features from splits (CV speed, % HR zones)
-    max_hr_dict = df_athletes_summary.set_index("athlete_id")["max_hr"].to_dict()
+    max_hr_dict = df_athletes_summary_new.set_index("athlete_id")["max_hr"].to_dict()
     df_split_features = process_splits(df_activity_splits, max_hr_dict)
 
     # b) Merge these new features with our base activity table `df_clean`
-    df_master = pd.merge(df_clean, df_split_features, on="activity_id", how="left")
+    df_master_new = pd.merge(df_clean, df_split_features, on="activity_id", how="left")
 
-    # c) Calculate final features directly on the master table (training load)
+    # c) Calculate final features directly on the master table (Training load and ACWR)
     # This method is inspired by the TRIMP by zones method (I choose to ignore the classic TRIMP method as it requires the resting heart rate and the gender which we don't have)
-    df_master['hr_intensity'] = (
-        df_master["pct_Z1"].fillna(0) * 1 +
-        df_master["pct_Z2"].fillna(0) * 2 +
-        df_master["pct_Z3"].fillna(0) * 3 +
-        df_master["pct_Z4"].fillna(0) * 4
+    df_master_new['hr_intensity'] = (
+        df_master_new["pct_Z1"].fillna(0) * 1 +
+        df_master_new["pct_Z2"].fillna(0) * 2 +
+        df_master_new["pct_Z3"].fillna(0) * 3 +
+        df_master_new["pct_Z4"].fillna(0) * 4
     )
-    df_master['training_load'] = df_master['hr_intensity'] * ((df_master['distance_activity'] + df_master['elevation_gain_activity'] * 10) / 100)  # I found this way in order to include elevation gain in the training load calculation, the x10 factor is arbitrary and can be adjusted
+    df_master_new['training_load'] = df_master_new['hr_intensity'] * (
+        (df_master_new['distance_activity'] + df_master_new['elevation_gain_activity'] * 10) / 100
+    ) # --> I found this way in order to include elevation gain in the training load calculation, the x10 factor is arbitrary and can be adjusted
 
-    # We will also use the ACWR (Acute Chronic Workload Ratio, different sources: Lolli et al., Griffin et al., Gabbett) concept to calculate a fatigue index: the ratio of the last 7 days of training load to the last 28 days
-    # ACWR -> 
+    # We will also use the ACWR (Acute Chronic Workload Ratio, different sources: Lolli et al., Griffin et al., Gabbett) concept to calculate a fatigue index:
+    # the ratio of the last 7 days of training load to the last 28 days (21 days is also used in some studies)
+    # How to interpret it? -> 
     # Below 0.8 = undertraining
     # 0.8 to 1.3 = optimal zone
     # Above 1.5 = overtraining, risk of injury increases considerably (Gabbett, 2018)
 
-    def ewma_load(x, span): # Use of the EWMA method to calculate the acute and chronic load -> it gives more weight to recent activities and is, therefore, more accurate (https://www.researchgate.net/publication/311860780_Calculating_acute_Chronic_workload_ratios_using_exponentially_weighted_moving_averages_provides_a_more_sensitive_indicator_of_injury_likelihood_than_rolling_averages#:~:text=The%20variance%20(R(2)),injury%20risk%20with%20higher%20ACWR.)
+    # Use of the EWMA method to calculate the acute and chronic load -> it gives more weight to recent activities and is, therefore, more accurate -->
+    # (https://www.researchgate.net/publication/311860780_Calculating_acute_Chronic_workload_ratios_using_exponentially_weighted_moving_averages_provides_a_more_sensitive_indicator_of_injury_likelihood_than_rolling_averages#:~:text=The%20variance%20(R(2)),injury%20risk%20with%20higher%20ACWR.)
+    def ewma_load(x, span):
         return x.ewm(span=span, min_periods=1).mean()
 
-    df_master['acute_load'] = df_master.groupby("athlete_id")['training_load'].transform(lambda x: ewma_load(x, span=7))     # Acute load = sum of last 7 days
-    df_master['chronic_load'] = chronic = df_master.groupby("athlete_id")['training_load'].transform(lambda x: ewma_load(x, span=28))    # Chronic load = weekly average over the last 28 days
-    df_master['acwr'] = df_master['acute_load'] / df_master['chronic_load']
+    df_master_new['acute_load'] = df_master_new.groupby("athlete_id")['training_load'].transform(lambda x: ewma_load(x, span=7))
+    df_master_new['chronic_load'] = df_master_new.groupby("athlete_id")['training_load'].transform(lambda x: ewma_load(x, span=28))
+    df_master_new['acwr'] = df_master_new['acute_load'] / df_master_new['chronic_load']
 
-    df_master.drop(columns=['acute_load', 'chronic_load', 'hr_intensity'], inplace=True)
+    df_master_new['cv_speed'].fillna(0, inplace=True)
+    df_master_new.drop(columns=['splits_metric', 'best_efforts', 'acute_load', 'chronic_load', 'hr_intensity'], inplace=True)
 
-    df_master['cv_speed'].fillna(0, inplace=True)
-    df_master.drop(columns=['splits_metric', 'best_efforts'], inplace=True)
+    # --- 7. ADD WEATHER DATA ---
+    print("Step 6: Fetching weather data for new activities...")
+    df_master_new['start_date'] = pd.to_datetime(df_master_new['start_date'])
+    weather_data = df_master_new.apply(get_weather_for_activity, axis=1)
+    df_master_new = pd.concat([df_master_new, weather_data], axis=1)
+    df_master_new.drop(columns=['start_latlng'], inplace=True)
 
-    # --- 5. ADD WEATHER DATA ---
-    print("Step 5: Fetching weather daata...")
-    df_master['start_date'] = pd.to_datetime(df_master['start_date'])
-    weather_data = df_master.apply(get_weather_for_activity, axis=1)
-    df_master = pd.concat([df_master, weather_data], axis=1)
-    df_master.drop(columns=['start_latlng'], inplace=True)
+    # --- 8. MERGE NEW WITH EXISTING DATA ---
+    df_master_final = pd.concat([df_master_existing, df_master_new], ignore_index=True)
 
-    # --- 6. SAVE THE 4 FINAL FILES ---
-    print("Step 6: Saving final files...")
-    
-    df_athletes_summary.to_csv(OUTPUT_PATH / "athletes_summary.csv", index=False)
-    df_best_efforts.to_csv(OUTPUT_PATH / "best_efforts.csv", index=False)
-    df_activity_splits.to_csv(OUTPUT_PATH / "activity_splits.csv", index=False)
-    df_master.to_csv(OUTPUT_PATH / "activities_master.csv", index=False)
-    
-    # for GCP
-    # df_master.to_sql("activities_master", engine, if_exists="replace", index=False)
-    # df_athletes_summary.to_sql("athletes_summary", engine, if_exists="replace", index=False)
-    # df_best_efforts.to_sql("best_efforts", engine, if_exists="replace", index=False)
+    # --- 9. SAVE UPDATED DATA ---
+    print("Step 7: Saving updated datasets...")
+    df_master_final.to_csv(OUTPUT_PATH / "activities_master.csv", index=False)
+
+    # Append / update the other tables too
+    df_best_efforts.to_csv(OUTPUT_PATH / "best_efforts.csv", mode="a", header=not (OUTPUT_PATH / "best_efforts.csv").exists(), index=False)
+    df_activity_splits.to_csv(OUTPUT_PATH / "activity_splits.csv", mode="a", header=not (OUTPUT_PATH / "activity_splits.csv").exists(), index=False)
+    df_athletes_summary_new.to_csv(OUTPUT_PATH / "athletes_summary.csv", mode="a", header=not (OUTPUT_PATH / "athletes_summary.csv").exists(), index=False)
+
+    # Optionally push to SQL
+    # df_master_new.to_sql("activities_master", engine, if_exists="append", index=False)
 
     print("Pipeline completed successfully!")
     print(f"Files saved in: {OUTPUT_PATH}")
