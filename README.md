@@ -48,7 +48,7 @@ View on Strava: https://www.strava.com/activities/{activity_id}
 
 - **activities_master**: contains every activity of every athlete, with added features used for analysis  
   Columns: `distance_activity`, `moving_time_activity`, `elevation_gain_activity`, `sport_type`, `activity_id`, `start_date`, `average_watts_activity`, `average_heartrate_activity`, `max_heartrate_activity`, `athlete_id`, `max_watts_activity`, `weighted_average_watts_activity`, `average_speed_km_h_activity`, `max_speed_km_h_activity`, `cumulative_distance_run`, `cumulative_distance_ride`, `cumulative_distance_swim`, `cv_speed`, `pct_Z1`, `pct_Z2`, `pct_Z3`, `pct_Z4`, `intensity`, `training_load`,
-  `temperature`, `humidity`, `apparent_temperature`, `precipitation`, `wind_speed`
+  `acwr`, `temperature`, `humidity`, `apparent_temperature`, `precipitation`, `wind_speed`
 
 ---
 
