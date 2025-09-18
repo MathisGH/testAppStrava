@@ -47,9 +47,9 @@ def clean_activities(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     df = df.rename(columns={'id': 'activity_id'})
 
     # Convert times and speeds
-    df['moving_time'] = df['moving_time'] / 60  # minutes
-    df['average_speed_km_h'] = df['average_speed'] * 3.6
-    df['max_speed_km_h_activity'] = df['max_speed'] * 3.6
+    df['moving_time'] = (df['moving_time'] / 60).round(2)  # minutes
+    df['average_speed_km_h'] = (df['average_speed'] * 3.6).round(2)
+    df['max_speed_km_h_activity'] = (df['max_speed'] * 3.6).round(2)
     df = df.drop(columns=["average_speed", 'max_speed'])
 
     df['start_date'] = pd.to_datetime(df['start_date'])
@@ -127,7 +127,7 @@ def process_best_efforts(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     df_best_efforts = df_best_efforts[keep_cols_best_efforts]
     
     df_best_efforts['start_date'] = pd.to_datetime(df_best_efforts['start_date'])
-    df_best_efforts['moving_time'] = df_best_efforts['moving_time'] / 60
+    df_best_efforts['moving_time'] = (df_best_efforts['moving_time'] / 60).round(2)
     df_best_efforts = df_best_efforts[~df_best_efforts['best_effort_name'].isin(
         ['2 mile', '1/2 mile', '10 mile', '1K', '400m', '15K', '1 mile']
     )]
@@ -232,7 +232,7 @@ def process_splits(splits_df, max_hr_dict):
     def get_hr_zone(hr, max_hr):
         if pd.isna(hr) or pd.isna(max_hr) or max_hr == 0:
             return np.nan
-        ratio = hr / max_hr
+        ratio = (hr / max_hr).round(4)
         if ratio < 0.82: return "Z1"
         elif ratio < 0.92: return "Z2"
         elif ratio < 0.97: return "Z3"
@@ -244,7 +244,7 @@ def process_splits(splits_df, max_hr_dict):
     results = []
     for activity_id, group in splits_df.groupby("activity_id"):
         mean_speed = group["average_speed_km_h_split"].mean()
-        cv_speed = (group["average_speed_km_h_split"].std() / mean_speed) if mean_speed != 0 else 0 # Ensure mean is not zero to avoid division by zero
+        cv_speed = round((group["average_speed_km_h_split"].std() / mean_speed), 5) if mean_speed != 0 else 0 # Ensure mean is not zero to avoid division by zero
         
         zone_pct = group["hr_zone"].value_counts(normalize=True).reindex(["Z1", "Z2", "Z3", "Z4"], fill_value=0)
         zone_pct.index = [f"pct_{z}" for z in zone_pct.index]
@@ -369,8 +369,8 @@ if __name__ == "__main__":
         df_master_new["pct_Z3"].fillna(0) * 3 +
         df_master_new["pct_Z4"].fillna(0) * 4
     )
-    df_master_new['training_load'] = df_master_new['hr_intensity'] * (
-        (df_master_new['distance_activity'] + df_master_new['elevation_gain_activity'] * 10) / 100
+    df_master_new['training_load'] = (df_master_new['hr_intensity'] * (
+        (df_master_new['distance_activity'] + df_master_new['elevation_gain_activity'] * 10) / 100).round(2)
     ) # --> I found this way in order to include elevation gain in the training load calculation, the x10 factor is arbitrary and can be adjusted
 
     # We will also use the ACWR (Acute Chronic Workload Ratio, different sources: Lolli et al., Griffin et al., Gabbett) concept to calculate a fatigue index:
@@ -387,7 +387,7 @@ if __name__ == "__main__":
 
     df_master_new['acute_load'] = df_master_new.groupby("athlete_id")['training_load'].transform(lambda x: ewma_load(x, span=7))
     df_master_new['chronic_load'] = df_master_new.groupby("athlete_id")['training_load'].transform(lambda x: ewma_load(x, span=28))
-    df_master_new['acwr'] = df_master_new['acute_load'] / df_master_new['chronic_load']
+    df_master_new['acwr'] = (df_master_new['acute_load'] / df_master_new['chronic_load']).round(3)
 
     df_master_new['cv_speed'].fillna(0, inplace=True)
     df_master_new.drop(columns=['splits_metric', 'best_efforts', 'acute_load', 'chronic_load', 'hr_intensity'], inplace=True)
