@@ -6,6 +6,9 @@ import time
 from dotenv import load_dotenv # type: ignore
 load_dotenv() # Load environment variables from the .env file
 
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 ATHLETES_FILE = "athletes.json" # JSON where athlete info will be stored (id, name, access and refresh token)
 DATA_FOLDER = "../data/raw" # in which fetched activities will be stored
 AUTH_URL = "https://www.strava.com/oauth/token" # URL in order to refresh the access token
@@ -40,7 +43,8 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
     athletes = load_athletes()
     
     for athlete_id, athlete in athletes.items():
-        print(f"Fetching activities for {athlete['firstname']} {athlete['lastname']}")
+        logging.info(f"Fetching activities for {athlete['firstname']} {athlete['lastname']}")
+        # print(f"Fetching activities for {athlete['firstname']} {athlete['lastname']}") # Print version
         
         # Refresh the token and save
         athlete = refresh_token(athlete)
@@ -74,11 +78,13 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
 
             new_activities.extend(new_data)
             request_page_num += 1
-            print(f"Page {request_page_num} fetched: ({len(new_data)} new activities)")
+            logging.info(f"Page {request_page_num} fetched: ({len(new_data)} new activities)")
+            # print(f"Page {request_page_num} fetched: ({len(new_data)} new activities)")
 
             # Stop the loop if we reach the quota and wait 15 minutes
             if request_page_num % 290 == 0:
-                print("API limit reached, sleeping 15 minutes...")
+                logging.warning("API limit reached, sleeping 15 minutes...")
+                # print("API limit reached, sleeping 15 minutes...")
                 time.sleep(900)
 
         # Fetch details of new activities
@@ -88,7 +94,8 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
             details = requests.get(f"{ACTIVITY_DETAILS_URL}{activity_id}", headers=headers).json()
             activity.update(details)
             detailed_activities.append(activity)
-            print(f"Details fetched for activity {activity_id}")
+            logging.info(f"Details fetched for activity {activity_id}")
+            # print(f"Details fetched for activity {activity_id}")
             time.sleep(1)  # Pause to respect the quotas
 
         # CSV update
@@ -98,7 +105,8 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
             full_id = f"{athlete_id}_{athlete['firstname']}_{athlete['lastname']}"
             df_final["athlete_id"] = full_id
             df_final.to_csv(file_path, index=False)
-            print(f"{len(detailed_activities)} new activities saved for {athlete['firstname']}")
+            logging.info(f"{len(detailed_activities)} new activities saved for {athlete['firstname']}")
+            # print(f"{len(detailed_activities)} new activities saved for {athlete['firstname']}")
 
 if __name__ == "__main__":
     fetch_activities()

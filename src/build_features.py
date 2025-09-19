@@ -8,6 +8,8 @@ from pathlib import Path
 from dotenv import load_dotenv # type: ignore
 from sqlalchemy import create_engine
 import requests
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- CONFIGURATION & INITIALIZATION ---
 load_dotenv()  # Load environment variables from .env file
@@ -200,7 +202,8 @@ def get_weather_for_activity(activity_row):
             'wind_speed': wind
         })
     except requests.exceptions.RequestException as e:
-        print(f"Erreur API pour l'activité {activity_row.get('activity_id', 'unknown')}: {e}")
+        logging.error(f"API error for activity {activity_row.get('activity_id', 'unknown')}: {e}")
+        # print(f"Erreur API pour l'activité {activity_row.get('activity_id', 'unknown')}: {e}")
         return pd.Series({'temperature': None, 'humidity': None, 'apparent_temperature': None, 'precipitation': None, 'wind_speed': None})
 
 
@@ -233,9 +236,9 @@ def process_splits(splits_df, max_hr_dict):
         if pd.isna(hr) or pd.isna(max_hr) or max_hr == 0:
             return np.nan
         ratio = (hr / max_hr).round(4)
-        if ratio < 0.82: return "Z1"
-        elif ratio < 0.92: return "Z2"
-        elif ratio < 0.97: return "Z3"
+        if ratio < 0.78: return "Z1"
+        elif ratio < 0.84: return "Z2"
+        elif ratio < 0.92: return "Z3"
         else: return "Z4"
 
     splits_df["max_hr"] = splits_df["athlete_id"].map(max_hr_dict)
@@ -320,39 +323,47 @@ if __name__ == "__main__":
     OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
     # --- 1. LOAD RAW DATA ---
-    print("Step 1: Loading raw data...")
+    logging.info("Step 1: Loading raw data...")
+    # print("Step 1: Loading raw data...")
     df_raw = load_data(DATA_PATH)
 
     # --- 2. LOAD EXISTING PROCESSED DATA (IF ANY) ---
-    print("Step 2: Checking for existing processed data...")
+    logging.info("Step 2: Checking for existing processed data...")
+    # print("Step 2: Checking for existing processed data...")
     existing_master_path = OUTPUT_PATH / "activities_master.csv"
     if existing_master_path.exists():
         df_master_existing = pd.read_csv(existing_master_path, parse_dates=["start_date"])
         processed_ids = set(df_master_existing["activity_id"].unique())
-        print(f"Found {len(processed_ids)} activities already processed")
+        logging.info(f"Found {len(processed_ids)} activities already processed")
+        # print(f"Found {len(processed_ids)} activities already processed")
     else:
         df_master_existing = pd.DataFrame()
         processed_ids = set()
 
     # --- 3. FILTER NEW ACTIVITIES ---
     df_new = df_raw[~df_raw["id"].isin(processed_ids)].copy()
-    print(f"Found {len(df_new)} new activities to process")
+    logging.info(f"Found {len(df_new)} new activities to process")
+    # print(f"Found {len(df_new)} new activities to process")
 
     if df_new.empty:
-        print("No new activities detected -> Pipeline finished")
+        logging.info("No new activities detected -> Pipeline finished")
+        # print("No new activities detected -> Pipeline finished")
         exit(0)
 
     # --- 4. CLEANING & BASIC DATA EXTRACTION ---
-    print("Step 3: Cleaning activities and processing best efforts...")
+    logging.info("Step 3: Cleaning activities and processing best efforts...")
+    # print("Step 3: Cleaning activities and processing best efforts...")
     df_clean, _ = clean_activities(df_new.copy())
     df_best_efforts, df_activity_splits = process_best_efforts(df_new.copy())
 
     # --- 5. GENERATE ATHLETE SUMMARY TABLE ---
-    print("Step 4: Generating athlete summary statistics...")
+    logging.info("Step 4: Generating athlete summary statistics...")
+    # print("Step 4: Generating athlete summary statistics...")
     df_athletes_summary_new = generate_athlete_stats(df_clean, df_best_efforts, MANUAL_STATS_PATH)
 
     # --- 6. CREATE/UPDATE MASTER TABLE ---
-    print("Step 5: Creating the 'activities_master' table for new activities...")
+    logging.info("Step 5: Creating the 'activities_master' table for new activities...")
+    # print("Step 5: Creating the 'activities_master' table for new activities...")
 
     # a) Create activity-level features from splits (CV speed, % HR zones)
     max_hr_dict = df_athletes_summary_new.set_index("athlete_id")["max_hr"].to_dict()
@@ -393,7 +404,8 @@ if __name__ == "__main__":
     df_master_new.drop(columns=['splits_metric', 'best_efforts', 'acute_load', 'chronic_load', 'hr_intensity'], inplace=True)
 
     # --- 7. ADD WEATHER DATA ---
-    print("Step 6: Fetching weather data for new activities...")
+    logging.info("Step 6: Fetching weather data for new activities...")
+    # print("Step 6: Fetching weather data for new activities...")
     df_master_new['start_date'] = pd.to_datetime(df_master_new['start_date'])
     weather_data = df_master_new.apply(get_weather_for_activity, axis=1)
     df_master_new = pd.concat([df_master_new, weather_data], axis=1)
@@ -403,7 +415,8 @@ if __name__ == "__main__":
     df_master_final = pd.concat([df_master_existing, df_master_new], ignore_index=True)
 
     # --- 9. SAVE UPDATED DATA ---
-    print("Step 7: Saving updated datasets...")
+    logging.info("Step 7: Saving updated datasets...")
+    # print("Step 7: Saving updated datasets...")
     df_master_final.to_csv(OUTPUT_PATH / "activities_master.csv", index=False)
 
     # Append / update the other tables too
@@ -414,5 +427,7 @@ if __name__ == "__main__":
     # Optionally push to SQL
     # df_master_new.to_sql("activities_master", engine, if_exists="append", index=False)
 
-    print("Pipeline completed successfully!")
-    print(f"Files saved in: {OUTPUT_PATH}")
+    logging.info("Pipeline completed successfully!")
+    # print("Pipeline completed successfully!")
+    logging.info(f"Files saved in: {OUTPUT_PATH}")
+    # print(f"Files saved in: {OUTPUT_PATH}")

@@ -39,6 +39,7 @@ jupyter_client==8.6.3
 jupyter_core==5.8.1
 kiwisolver==1.4.8
 llvmlite==0.44.0
+logging==0.4.9.6
 MarkupSafe==3.0.2
 matplotlib==3.10.3
 matplotlib-inline==0.1.7
