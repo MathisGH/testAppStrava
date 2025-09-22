@@ -3,14 +3,17 @@ import pandas as pd
 import os
 import json
 import time
+import pathlib as Path
 from dotenv import load_dotenv # type: ignore
 load_dotenv() # Load environment variables from the .env file
 
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-ATHLETES_FILE = "athletes.json" # JSON where athlete info will be stored (id, name, access and refresh token)
-DATA_FOLDER = "../data/raw" # in which fetched activities will be stored
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+ATHLETES_FILE = SCRIPT_DIR / "athletes.json" # JSON where athlete info will be stored (id, name, access and refresh token)
+DATA_FOLDER = SCRIPT_DIR.parent / "data" / "raw" # in which fetched activities will be stored
 AUTH_URL = "https://www.strava.com/oauth/token" # URL in order to refresh the access token
 ACTIVITIES_URL = "https://www.strava.com/api/v3/athlete/activities" # URL in order to fetch activities from an athlete
 ACTIVITY_DETAILS_URL = "https://www.strava.com/api/v3/activities/" # URL in order to fetch the details of an activity
