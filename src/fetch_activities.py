@@ -3,9 +3,12 @@ import pandas as pd
 import os
 import json
 import time
-import pathlib as Path
+from pathlib import Path
 from dotenv import load_dotenv # type: ignore
 load_dotenv() # Load environment variables from the .env file
+
+import gspread # The script will directly read the tokens from the Google Sheet 
+from oauth2client.service_account import ServiceAccountCredentials
 
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,13 +25,36 @@ CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET") # get the Strava secret token 
 
 os.makedirs(DATA_FOLDER, exist_ok=True)  # If the folder doesn't exist yet, create it
 
-def load_athletes(): # Load athletes from the JSON file
-    with open(ATHLETES_FILE, "r") as f:
-        return json.load(f)["athletes"]
+def load_athletes(): # Load athletes DIRECTLY FROM GOOGLE SHEETS
+    """Connects to Google Sheets and fetches athlete data."""
+    try:
+        # Google Sheets Authentication
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        SERVICE_ACCOUNT_JSON_STR = os.getenv("GOOGLE_SERVICE_ACCOUNT")
+        creds_dict = json.loads(SERVICE_ACCOUNT_JSON_STR)
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        client = gspread.authorize(creds)
+        
+        # Fetching data from the specified Google Sheet (my sheet name is "Athletes Strava")
+        sheet = client.open("Athletes Strava").sheet1
+        records = sheet.get_all_records()
 
-def save_athletes(data): # Save athletes to the JSON file
-    with open(ATHLETES_FILE, "w") as f:
-        json.dump({"athletes": data}, f, indent=4)
+        # Converting to the format used in the rest of the app
+        athletes_dict = {}
+        for row in records:
+            athlete_id = str(row['id'])
+            athletes_dict[athlete_id] = {
+                "firstname": row.get("firstname"),
+                "lastname": row.get("lastname"),
+                "access_token": row.get("access_token"),
+                "refresh_token": row.get("refresh_token")
+            }
+        return athletes_dict
+        
+    except Exception as e:
+        print(f"Error loading athletes from Google Sheets: {e}")
+        return {}
+
 
 def refresh_token(athlete): # Access token refresh
     payload = {
@@ -49,9 +75,8 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
         logging.info(f"Fetching activities for {athlete['firstname']} {athlete['lastname']}")
         # print(f"Fetching activities for {athlete['firstname']} {athlete['lastname']}") # Print version
         
-        # Refresh the token and save
+        # Refresh the token
         athlete = refresh_token(athlete)
-        save_athletes(athletes)
 
         headers = {'Authorization': f'Bearer {athlete["access_token"]}'}
         file_path = os.path.join(DATA_FOLDER, f"activities_{athlete_id}_{athlete['firstname']}_{athlete['lastname']}.csv")
