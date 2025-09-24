@@ -460,7 +460,7 @@ if __name__ == "__main__":
     df_master_new = df_master_new.join(pct_30d, on="start_date")
     df_master_new = df_master_new.join(pct_60d, on="start_date")
 
-    # d) Compute the cumulative training load for the last 2, 4 and 8 weeks
+    # e) Compute the cumulative training load for the last 2, 4 and 8 weeks
     def cumulative_load_last_weeks(df):
         df["start_date"] = pd.to_datetime(df["start_date"])
         df = df.sort_values(by=["athlete_id", "start_date"])
