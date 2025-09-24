@@ -295,9 +295,9 @@ def generate_athlete_stats(df_clean, df_best_efforts, manual_stats_path):
         for col in manual_stats.columns:
             if col != 'athlete_id' and f'{col}_manual' in df_athletes_summary.columns:
                 df_athletes_summary[col] = df_athletes_summary[col].fillna(df_athletes_summary[f'{col}_manual'])
-                df_athletes_summary.drop(columns=[f'{col}_manual'], inplace=True)
+                df_athletes_summary = df_athletes_summary.drop(columns=[f'{col}_manual'])
                 
-    df_athletes_summary.fillna(0, inplace=True)
+    df_athletes_summary = df_athletes_summary.fillna(0)
     activity_cols = [col for col in df_athletes_summary.columns if 'Nb_activities' in col]
     df_athletes_summary['Nb_activities'] = df_athletes_summary[activity_cols].sum(axis=1)
 
@@ -400,18 +400,18 @@ if __name__ == "__main__":
     df_master_new['chronic_load'] = df_master_new.groupby("athlete_id")['training_load'].transform(lambda x: ewma_load(x, span=28))
     df_master_new['acwr'] = round(df_master_new['acute_load'] / df_master_new['chronic_load'], 3)
 
-    df_master_new['cv_speed'].fillna(0, inplace=True)
-    df_master_new.drop(columns=['splits_metric', 'best_efforts', 'acute_load', 'chronic_load', 'hr_intensity'], inplace=True)
+    df_master_new['cv_speed'] = df_master_new['cv_speed'].fillna(0)
+    df_master_new = df_master_new.drop(columns=['splits_metric', 'best_efforts', 'acute_load', 'chronic_load', 'hr_intensity'])
 
     # d) Compute the cumulative percentage of time spent in each zone (to change for cycling and swimming later)
     # Time in each zone (in seconds)
-    df_master_new["time_Z1"] = df_master_new["pct_Z1"] * df_master_new["moving_time"]
-    df_master_new["time_Z2"] = df_master_new["pct_Z2"] * df_master_new["moving_time"]
-    df_master_new["time_Z3"] = df_master_new["pct_Z3"] * df_master_new["moving_time"]
-    df_master_new["time_Z4"] = df_master_new["pct_Z4"] * df_master_new["moving_time"]
+    df_master_new["time_Z1"] = df_master_new["pct_Z1"] * df_master_new["moving_time_activity"]
+    df_master_new["time_Z2"] = df_master_new["pct_Z2"] * df_master_new["moving_time_activity"]
+    df_master_new["time_Z3"] = df_master_new["pct_Z3"] * df_master_new["moving_time_activity"]
+    df_master_new["time_Z4"] = df_master_new["pct_Z4"] * df_master_new["moving_time_activity"]
 
     # Cumulative time per athlete
-    df_master_new["cumulative_time"] = df_master_new.groupby("athlete_id")["moving_time"].cumsum()
+    df_master_new["cumulative_time"] = df_master_new.groupby("athlete_id")["moving_time_activity"].cumsum()
     df_master_new["cumulative_Z1"] = df_master_new.groupby("athlete_id")["time_Z1"].cumsum()
     df_master_new["cumulative_Z2"] = df_master_new.groupby("athlete_id")["time_Z2"].cumsum()
     df_master_new["cumulative_Z3"] = df_master_new.groupby("athlete_id")["time_Z3"].cumsum()
@@ -431,7 +431,7 @@ if __name__ == "__main__":
         for athlete_id, group in df.groupby("athlete_id"):
             group = group.sort_values("start_date").set_index("start_date")
 
-            rolling_time = group["moving_time"].rolling(f"{days}D").sum()
+            rolling_time = group["moving_time_activity"].rolling(f"{days}D").sum()
             rolling_Z1   = group["time_Z1"].rolling(f"{days}D").sum()
             rolling_Z2   = group["time_Z2"].rolling(f"{days}D").sum()
             rolling_Z3   = group["time_Z3"].rolling(f"{days}D").sum()
@@ -454,11 +454,13 @@ if __name__ == "__main__":
 
         return pd.concat(results)
 
-    pct_30d = pct_time_last_days(df_master_new, 30)
-    pct_60d = pct_time_last_days(df_master_new, 60)
+    pct_30d = pct_time_last_days(df_master_new, 30).drop(columns=["athlete_id"])
+    pct_60d = pct_time_last_days(df_master_new, 60).drop(columns=["athlete_id"])
 
     df_master_new = df_master_new.join(pct_30d, on="start_date")
     df_master_new = df_master_new.join(pct_60d, on="start_date")
+
+    df_master_new = df_master_new.drop(columns=["time_Z1", "time_Z2", "time_Z3", "time_Z4", "cumulative_time", "cumulative_Z1", "cumulative_Z2", "cumulative_Z3", "cumulative_Z4"])
 
     # e) Compute the cumulative training load for the last 2, 4 and 8 weeks
     def cumulative_load_last_weeks(df):
@@ -468,7 +470,7 @@ if __name__ == "__main__":
         df['cumulative_training_load_2_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('14D', min_periods=1).sum().reset_index(level=0, drop=True))
         df['cumulative_training_load_4_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('28D', min_periods=1).sum().reset_index(level=0, drop=True))
         df['cumulative_training_load_8_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('56D', min_periods=1).sum().reset_index(level=0, drop=True))
-        df.reset_index(inplace=True)
+        df = df.reset_index()
 
         return df
 
@@ -481,7 +483,7 @@ if __name__ == "__main__":
     df_master_new['start_date'] = pd.to_datetime(df_master_new['start_date'])
     weather_data = df_master_new.apply(get_weather_for_activity, axis=1)
     df_master_new = pd.concat([df_master_new, weather_data], axis=1)
-    df_master_new.drop(columns=['start_latlng'], inplace=True)
+    df_master = df_master_new.drop(columns=['start_latlng'])
 
     # --- 8. MERGE NEW WITH EXISTING DATA ---
     df_master_final = pd.concat([df_master_existing, df_master_new], ignore_index=True)
