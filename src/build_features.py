@@ -237,8 +237,8 @@ def process_splits(splits_df, max_hr_dict):
             return np.nan
         ratio = round(hr / max_hr, 4)
         if ratio < 0.78: return "Z1"
-        elif ratio < 0.84: return "Z2"
-        elif ratio < 0.92: return "Z3"
+        elif 0.78 <= ratio < 0.84: return "Z2"
+        elif 0.84 <= ratio < 0.92: return "Z3"
         else: return "Z4"
 
     splits_df["max_hr"] = splits_df["athlete_id"].map(max_hr_dict)
@@ -402,6 +402,78 @@ if __name__ == "__main__":
 
     df_master_new['cv_speed'].fillna(0, inplace=True)
     df_master_new.drop(columns=['splits_metric', 'best_efforts', 'acute_load', 'chronic_load', 'hr_intensity'], inplace=True)
+
+    # d) Compute the cumulative percentage of time spent in each zone (to change for cycling and swimming later)
+    # Time in each zone (in seconds)
+    df_master_new["time_Z1"] = df_master_new["pct_Z1"] * df_master_new["moving_time"]
+    df_master_new["time_Z2"] = df_master_new["pct_Z2"] * df_master_new["moving_time"]
+    df_master_new["time_Z3"] = df_master_new["pct_Z3"] * df_master_new["moving_time"]
+    df_master_new["time_Z4"] = df_master_new["pct_Z4"] * df_master_new["moving_time"]
+
+    # Cumulative time per athlete
+    df_master_new["cumulative_time"] = df_master_new.groupby("athlete_id")["moving_time"].cumsum()
+    df_master_new["cumulative_Z1"] = df_master_new.groupby("athlete_id")["time_Z1"].cumsum()
+    df_master_new["cumulative_Z2"] = df_master_new.groupby("athlete_id")["time_Z2"].cumsum()
+    df_master_new["cumulative_Z3"] = df_master_new.groupby("athlete_id")["time_Z3"].cumsum()
+    df_master_new["cumulative_Z4"] = df_master_new.groupby("athlete_id")["time_Z4"].cumsum()
+
+    # Cumulative percentage of time spent in each zone
+    df_master_new["pct_time_Z1"] = (df_master_new["cumulative_Z1"] / df_master_new["cumulative_time"] * 100).round(2)
+    df_master_new["pct_time_Z2"] = (df_master_new["cumulative_Z2"] / df_master_new["cumulative_time"] * 100).round(2)
+    df_master_new["pct_time_Z3"] = (df_master_new["cumulative_Z3"] / df_master_new["cumulative_time"] * 100).round(2)
+    df_master_new["pct_time_Z4"] = (df_master_new["cumulative_Z4"] / df_master_new["cumulative_time"] * 100).round(2)
+
+    # Cumulative percentage during the last 30 and 60 days
+    def pct_time_last_days(df, days):
+        df = df.copy()
+        results = []
+
+        for athlete_id, group in df.groupby("athlete_id"):
+            group = group.sort_values("start_date").set_index("start_date")
+
+            rolling_time = group["moving_time"].rolling(f"{days}D").sum()
+            rolling_Z1   = group["time_Z1"].rolling(f"{days}D").sum()
+            rolling_Z2   = group["time_Z2"].rolling(f"{days}D").sum()
+            rolling_Z3   = group["time_Z3"].rolling(f"{days}D").sum()
+            rolling_Z4   = group["time_Z4"].rolling(f"{days}D").sum()
+
+            pct_Z1 = (rolling_Z1 / rolling_time * 100).fillna(0).round(2)
+            pct_Z2 = (rolling_Z2 / rolling_time * 100).fillna(0).round(2)
+            pct_Z3 = (rolling_Z3 / rolling_time * 100).fillna(0).round(2)
+            pct_Z4 = (rolling_Z4 / rolling_time * 100).fillna(0).round(2)
+
+            tmp = pd.DataFrame({
+                "athlete_id": athlete_id,
+                f"pct_time_Z1_last_{days}d": pct_Z1,
+                f"pct_time_Z2_last_{days}d": pct_Z2,
+                f"pct_time_Z3_last_{days}d": pct_Z3,
+                f"pct_time_Z4_last_{days}d": pct_Z4,
+            }, index=group.index)
+
+            results.append(tmp)
+
+        return pd.concat(results)
+
+    pct_30d = pct_time_last_days(df_master_new, 30)
+    pct_60d = pct_time_last_days(df_master_new, 60)
+
+    df_master_new = df_master_new.join(pct_30d, on="start_date")
+    df_master_new = df_master_new.join(pct_60d, on="start_date")
+
+    # d) Compute the cumulative training load for the last 2, 4 and 8 weeks
+    def cumulative_load_last_weeks(df):
+        df["start_date"] = pd.to_datetime(df["start_date"])
+        df = df.sort_values(by=["athlete_id", "start_date"])
+        df = df.set_index("start_date")
+        df['cumulative_training_load_2_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('14D', min_periods=1).sum().reset_index(level=0, drop=True))
+        df['cumulative_training_load_4_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('28D', min_periods=1).sum().reset_index(level=0, drop=True))
+        df['cumulative_training_load_8_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('56D', min_periods=1).sum().reset_index(level=0, drop=True))
+        df.reset_index(inplace=True)
+
+        return df
+
+    df_master_new = cumulative_load_last_weeks(df_master_new)
+
 
     # --- 7. ADD WEATHER DATA ---
     logging.info("Step 6: Fetching weather data for new activities...")
