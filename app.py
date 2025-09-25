@@ -18,7 +18,8 @@ st.set_page_config(layout="wide")
 
 CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")
 CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET")
-REDIRECT_URI = "http://localhost:8501" # For local testing --> change for deployment
+# REDIRECT_URI = "http://localhost:8501" # For local testing --> change for deployment
+REDIRECT_URI = "https://testappstrava.streamlit.app/"
 GOOGLE_SHEET_NAME = "Athletes Strava"
 
 # Google Sheets setup
