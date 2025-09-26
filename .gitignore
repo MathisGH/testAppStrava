@@ -5,6 +5,7 @@
 data/
 src/archived_scripts_and_files/
 google_service_account.json
+*.pem
 
 # === JUPYTER NOTEBOOKS ===
 .ipynb_checkpoints/
