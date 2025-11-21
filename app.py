@@ -19,19 +19,21 @@ st.set_page_config(layout="wide")
 CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")
 CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET")
 # REDIRECT_URI = "http://localhost:8501" # For local testing --> change for deployment
-REDIRECT_URI = "https://testappstrava.streamlit.app/"
+# REDIRECT_URI = "https://testappstrava.streamlit.app/"
+REDIRECT_URI = os.getenv("STRAVA_REDIRECT_URL")
 GOOGLE_SHEET_NAME = "Athletes Strava"
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT")
-if SERVICE_ACCOUNT_JSON:
-    creds_dict = json.loads(SERVICE_ACCOUNT_JSON)
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+# Après modification
+SERVICE_ACCOUNT_FILE = "/home/ec2-user/strava-app/testAppStrava/creds.json"
+if os.path.exists(SERVICE_ACCOUNT_FILE):
+    creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
     gspread_client = gspread.authorize(creds)
     sheet = gspread_client.open(GOOGLE_SHEET_NAME).sheet1
 else:
     sheet = None
+    st.warning("Google credentials file not found. Please check creds.json")
 
 
 # --- STRAVA AUTHENTICATION LOGIC ---
