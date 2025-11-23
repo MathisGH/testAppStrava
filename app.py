@@ -12,6 +12,14 @@ import plotly.graph_objects as go
 from dotenv import load_dotenv
 from oauth2client.service_account import ServiceAccountCredentials
 
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+SRC_DIR = BASE_DIR / "src"
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.append(str(SRC_DIR))
+
 # --- CONFIGURATION ---
 load_dotenv()
 st.set_page_config(layout="wide")
