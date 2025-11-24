@@ -4,6 +4,7 @@ import os
 import ast
 import warnings
 import math
+import time
 from pathlib import Path
 from dotenv import load_dotenv # type: ignore
 from sqlalchemy import create_engine
@@ -183,6 +184,9 @@ def get_weather_for_activity(activity_row):
     try:
         response = requests.get(API_URL, params=params)
         response.raise_for_status()
+
+        time.sleep(1)  # To respect API rate limits
+
         data = response.json()
 
         hourly_data = data['hourly']
