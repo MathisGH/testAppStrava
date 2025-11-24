@@ -283,7 +283,10 @@ def generate_athlete_stats(df_clean, df_best_efforts, manual_stats_path):
 
     # Best efforts
     for dist_km in [5, 10, 21.1, 42.2]:
-        col_name = f"PB_{int(dist_km) if dist_km.is_integer() else dist_km}km"
+        dist_km_float = float(dist_km)
+        clean_dist = int(dist_km_float) if dist_km_float.is_integer() else dist_km_float
+        col_name = f"PB_{clean_dist}km"
+
         pb_times = extract_best_effort_time(df_best_efforts, dist_km)
         df_athletes_summary = df_athletes_summary.merge(pb_times.rename(col_name), on='athlete_id', how='left')
 
