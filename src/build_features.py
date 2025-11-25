@@ -185,8 +185,6 @@ def get_weather_for_activity(activity_row):
         response = requests.get(API_URL, params=params)
         response.raise_for_status()
 
-        time.sleep(1)  # To respect API rate limits
-
         data = response.json()
 
         hourly_data = data['hourly']
