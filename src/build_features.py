@@ -212,6 +212,17 @@ def get_weather_for_activity(activity_row):
 
 # --- FEATURE ENGINEERING FUNCTIONS ---
 
+def vdot_to_speed(vdot):
+    a = 0.000104
+    b = 0.182258
+    c = -4.6 - vdot
+    discriminant = b**2 - 4*a*c
+    if discriminant < 0:
+        return None
+    v_m_per_min = (-b + math.sqrt(discriminant)) / (2*a)
+    v_kmh = (v_m_per_min * 60) / 1000
+    return v_kmh
+
 def extract_best_effort_time(df_best_efforts, distance_km):
     return (
         df_best_efforts[
