@@ -7,6 +7,7 @@ View on Strava: https://www.strava.com/activities/{activity_id}
 
 ⚠ Not affiliated with Strava.
 
+URL to test the app: http://35.180.120.114:8501/
 
 ## Overview
 - 'server.py': Flask app for Strava authentification and token storage
