@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 import gspread
+import joblib
 import plotly.express as px
 import plotly.graph_objects as go
 from dotenv import load_dotenv
@@ -43,6 +44,25 @@ else:
     sheet = None
     st.warning("Google credentials file not found. Please check creds.json")
 
+# --- CLUSTERING ---
+
+@st.cache_resource
+def load_models():
+    scaler = joblib.load("models/scaler.pkl")
+    kmeans = joblib.load("models/kmeans.pkl")
+    return scaler, kmeans
+
+@st.cache_data
+def load_cluster_labels():
+    try:
+        with open("models/cluster_labels.json", "r") as f:
+            labels = json.load(f)
+    except:
+        labels = {}
+    return labels
+
+scaler, kmeans = load_models()
+cluster_labels = load_cluster_labels()
 
 # --- STRAVA AUTHENTICATION LOGIC ---
 
