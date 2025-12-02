@@ -55,3 +55,4 @@ URL to test the app: http://35.180.120.114:8501/
 
 ## Raw
 - **activities_<athlete_id>_<firstname>_<lastname>**: contains all raw data of every activity for each athlete
+
