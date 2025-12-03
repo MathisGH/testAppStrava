@@ -213,6 +213,8 @@ def get_weather_for_activity(activity_row):
 # --- FEATURE ENGINEERING FUNCTIONS ---
 
 def vdot_to_speed(vdot):
+    if vdot is None:
+        return None
     a = 0.000104
     b = 0.182258
     c = -4.6 - vdot
@@ -387,7 +389,7 @@ def build_activity_master(df_clean, df_split_features, df_athletes_summary_new):
     )
 
 # --- 4) Compute VDOT speed (expected speed from physiology) --
-    df_master['VDOT_speed'] = df_master['VDOT_max'].apply(vdot_to_speed)
+    df_master['VDOT_speed'] = df_master['VDOT_max'].apply(vdot_to_speed) # change this later (or the function vdot_to_speed)
 
 # If VDOT is missing → use global median running speed
     global_median_speed = df_master['average_speed_km_h_activity'].median()
@@ -567,6 +569,8 @@ if __name__ == "__main__":
 
     # --- 8. MERGE NEW WITH EXISTING DATA ---
     df_master_final = pd.concat([df_master_existing, df_master_new], ignore_index=True)
+    df_master_final.drop_duplicates(subset=['activity_id'], inplace=True)
+
 
     # --- 9. SAVE UPDATED DATA ---
     logging.info("Step 7: Saving updated datasets...")
