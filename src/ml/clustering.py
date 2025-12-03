@@ -3,109 +3,117 @@ import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from pathlib import Path
-import math
 import logging
 import os
 import joblib
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def vdot_to_speed(vdot):
-    a = 0.000104
-    b = 0.182258
-    c = -4.6 - vdot
-    discriminant = b**2 - 4*a*c
-    if discriminant < 0:
-        return None
-    v_m_per_min = (-b + math.sqrt(discriminant)) / (2*a)
-    v_kmh = (v_m_per_min * 60) / 1000
-    return v_kmh
 
-def prepare_features(activities_master, athletes_summary):
-    df = activities_master.copy()
+# ------------------------------------------------------
+# FEATURE SELECTION
+# ------------------------------------------------------
+FEATURE_COLUMNS = [
+    "cv_speed",
+    "pct_Z1", "pct_Z2", "pct_Z3", "pct_Z4",
+    "speed_relative",
+    "distance_relative",
+    "training_load_relative"
+]
 
-    df['distance_relative'] = df['distance_activity'] / df.groupby('athlete_id')['distance_activity'].transform('median')
-    df['training_load_relative'] = df['training_load'] / df.groupby('athlete_id')['training_load'].transform('median')
 
-    df = df.merge(athletes_summary[['athlete_id', 'VDOT_max']], on='athlete_id', how='left')
-    df.drop_duplicates(subset=['activity_id'], inplace=True)
+# ------------------------------------------------------
+# LOAD OR TRAIN MODEL
+# ------------------------------------------------------
+def load_or_train_kmeans(X_scaled, n_clusters=5, model_path="models"):
 
-    df['VDOT_speed'] = df['VDOT_max'].apply(vdot_to_speed)
-    global_median_speed = df['average_speed_km_h_activity'].median() # will change this later
-    df['VDOT_speed'] = df['VDOT_speed'].fillna(global_median_speed) # will change this later
+    model_path = Path(model_path)
+    kmeans_file = model_path / "kmeans.pkl"
+    scaler_file = model_path / "scaler.pkl"
 
-    df['speed_relative'] = df['average_speed_km_h_activity'] / df['VDOT_speed']
+    # If both model + scaler exist → load them
+    if kmeans_file.exists() and scaler_file.exists():
+        logging.info("Loading existing scaler + KMeans model...")
+        scaler = joblib.load(scaler_file)
+        kmeans = joblib.load(kmeans_file)
+        return scaler, kmeans
 
-    # keep only runs for now
-    mask = df['sport_type'] == 'Run'
-    features = ['cv_speed', 'pct_Z1', 'pct_Z2', 'pct_Z3', 'pct_Z4',
-                'speed_relative', 'distance_relative', 'training_load_relative']
-
-    df_features = df[mask].copy()
-
-    # save original index and activity_id to remerge later
-    df_features = df_features.reset_index().rename(columns={'index': 'original_idx'})
-    df_features = df_features[['original_idx', 'activity_id'] + features]
-
-    X = df_features[features].replace([np.inf, -np.inf], np.nan)
-    X_clean = X.dropna()
-    df_features = df_features.loc[X_clean.index].reset_index(drop=True)
-    X_clean = X_clean.reset_index(drop=True)
-
+    # Otherwise → train new
+    logging.info("Training new scaler + KMeans...")
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_clean)
+    X_scaled = scaler.fit_transform(X_scaled)
 
-    return df_features, X_clean, X_scaled, scaler
-
-def train_and_save_kmeans(X_scaled, n_clusters=5, model_path="models"):
-    logging.info(f"Training KMeans with k={n_clusters}")
     kmeans = KMeans(n_clusters=n_clusters, random_state=15, n_init=10)
     kmeans.fit(X_scaled)
 
-    os.makedirs(model_path, exist_ok=True)
-    joblib.dump(kmeans, os.path.join(model_path, "kmeans.pkl"))
-    logging.info("Saved KMeans to models/kmeans.pkl")
-    return kmeans
+    # Save
+    model_path.mkdir(parents=True, exist_ok=True)
+    joblib.dump(scaler, scaler_file)
+    joblib.dump(kmeans, kmeans_file)
 
-def assign_clusters_and_merge(activities_master, df_features, X_scaled, kmeans, scaler, model_path="models"):
+    logging.info("Saved scaler + KMeans in models/")
+    return scaler, kmeans
+
+
+# ------------------------------------------------------
+# PREPARE X FOR CLUSTERING
+# ------------------------------------------------------
+def prepare_X(df):
+    X = df[FEATURE_COLUMNS].replace([np.inf, -np.inf], np.nan)
+    X_clean = X.dropna().reset_index(drop=True)
+    df_clean = df.loc[X_clean.index].reset_index(drop=True)
+    return df_clean, X_clean
+
+
+# ------------------------------------------------------
+# MAIN CLUSTERING PIPELINE
+# ------------------------------------------------------
+def run_clustering(input_path="data/processed/activities_master.csv",
+                   output_path="data/processed/activities_master_with_clusters.csv",
+                   model_path="models",
+                   n_clusters=5):
+
+    logging.info("Loading activities_master...")
+    df = pd.read_csv(input_path)
+
+    # Only RUN
+    df_run = df[df["sport_type"] == "Run"].copy()
+
+    # Prepare features
+    df_run_clean, X_clean = prepare_X(df_run)
+
+    # Load or train the model
+    scaler, kmeans = load_or_train_kmeans(X_clean, n_clusters=n_clusters, model_path=model_path)
+
+    # Scale and predict
+    X_scaled = scaler.transform(X_clean)
     labels = kmeans.predict(X_scaled)
 
-    df_clusters = df_features[['original_idx', 'activity_id']].copy().reset_index(drop=True)
-    df_clusters['cluster'] = labels
+    # Attach clusters to df_run_clean
+    df_run_clean["cluster"] = labels
 
-    master = activities_master.copy().reset_index().rename(columns={'index': 'original_idx'})
+    # Merge back into the full df (activities that are not RUN get -1)
+    df_full = df.copy()
+    df_full["cluster"] = -1
+    df_full.loc[df_run_clean.index, "cluster"] = df_run_clean["cluster"]
 
-    master = master.merge(df_clusters[['original_idx', 'cluster']], on='original_idx', how='left')
-    master['cluster'] = master['cluster'].fillna(-1).astype(int) # unclustered activities get cluster -1 (just in case)
+    # Save output
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    df_full.to_csv(output_path, index=False)
 
-    out_dir = Path("data/processed")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_csv = out_dir / "activities_master_with_clusters.csv"
-    master.to_csv(out_csv, index=False)
-    logging.info(f"Saved master with clusters to {out_csv}")
+    logging.info(f"Saved final clustered master → {output_path}")
+    return df_full
 
-    os.makedirs(model_path, exist_ok=True)
-    joblib.dump(scaler, os.path.join(model_path, "scaler.pkl"))
-    joblib.dump(kmeans, os.path.join(model_path, "kmeans.pkl"))
-    logging.info(f"Saved scaler and kmeans in {model_path}")
 
-    return master
-
+# ------------------------------------------------------
+# SCRIPT ENTRY POINT
+# ------------------------------------------------------
 if __name__ == "__main__":
-    BASE_DIR = Path(__file__).resolve().parents[1].parent
-    ACTIVITIES_PATH = BASE_DIR / "data" / "processed" / "activities_master.csv"
-    ATHLETES_PATH = BASE_DIR / "data" / "processed" / "athletes_summary.csv"
+    BASE_DIR = Path(__file__).resolve().parents[1]
+    INPUT = BASE_DIR / "data" / "processed" / "activities_master.csv"
+    OUTPUT = BASE_DIR / "data" / "processed" / "activities_master_with_clusters.csv"
+    MODELS = BASE_DIR / "models"
 
-    activities_master = pd.read_csv(ACTIVITIES_PATH)
-    athletes_summary = pd.read_csv(ATHLETES_PATH)
+    run_clustering(input_path=INPUT, output_path=OUTPUT, model_path=MODELS, n_clusters=5)
 
-    df_features, X_clean, X_scaled, scaler = prepare_features(activities_master, athletes_summary)
-
-    if X_scaled.shape[0] == 0:
-        logging.error("No rows available after cleaning/imputation")
-        raise SystemExit(1)
-
-    kmeans = train_and_save_kmeans(X_scaled, n_clusters=5)
-    master_with_clusters = assign_clusters_and_merge(activities_master, df_features, X_scaled, kmeans, scaler)
-
-    logging.info("Clustering done")
+    logging.info("Clustering completed successfully.")

@@ -328,6 +328,84 @@ def generate_athlete_stats(df_clean, df_best_efforts, manual_stats_path):
 
     return df_athletes_summary
 
+
+def build_activity_master(df_clean, df_split_features, df_athletes_summary_new):
+    """
+    Merge cleaned activity data with split-based features
+    and compute final activity-level metrics
+    (intensity, training load, ACWR, ...)
+    """
+
+    df_master = pd.merge(df_clean, df_split_features,
+                         on="activity_id", how="left")
+
+    # --- HR INTENSITY ---
+    df_master['hr_intensity'] = (
+        df_master["pct_Z1"].fillna(0) * 1 +
+        df_master["pct_Z2"].fillna(0) * 2 +
+        df_master["pct_Z3"].fillna(0) * 3 +
+        df_master["pct_Z4"].fillna(0) * 4
+    )
+
+    # --- TRAINING LOAD ---
+    df_master['training_load'] = round(
+        df_master['hr_intensity'] *
+        ((df_master['distance_activity'] +
+          df_master['elevation_gain_activity'] * 10) / 100),
+        2
+    )
+
+    # --- ACUTE & CHRONIC LOADS (EWMA method) ---
+    def ewma_load(x, span):
+        return x.ewm(span=span, min_periods=1).mean()
+
+    df_master['acute_load'] = df_master.groupby("athlete_id")['training_load'] \
+                                       .transform(lambda x: ewma_load(x, span=7))
+
+    df_master['chronic_load'] = df_master.groupby("athlete_id")['training_load'] \
+                                         .transform(lambda x: ewma_load(x, span=28))
+
+    df_master['acwr'] = round(df_master['acute_load'] / df_master['chronic_load'], 3)
+
+    # --- 1) Relative distance per athlete ------------------------
+    df_master['distance_relative'] = (
+        df_master['distance_activity'] /
+        df_master.groupby('athlete_id')['distance_activity'].transform('median')
+    )
+
+# --- 2) Relative training load per athlete -------------------
+    df_master['training_load_relative'] = (
+        df_master['training_load'] /
+        df_master.groupby('athlete_id')['training_load'].transform('median')
+    )
+
+# --- 3) Add VDOT_max from athletes_summary -------------------
+    df_master = df_master.merge(
+        df_athletes_summary_new[['athlete_id', 'VDOT_max']],
+        on='athlete_id',
+        how='left'
+    )
+
+# --- 4) Compute VDOT speed (expected speed from physiology) --
+    df_master['VDOT_speed'] = df_master['VDOT_max'].apply(vdot_to_speed)
+
+# If VDOT is missing → use global median running speed
+    global_median_speed = df_master['average_speed_km_h_activity'].median()
+    df_master['VDOT_speed'] = df_master['VDOT_speed'].fillna(global_median_speed)
+
+# --- 5) Speed relative to athlete potential ------------------
+    df_master['speed_relative'] = (
+        df_master['average_speed_km_h_activity'] /
+        df_master['VDOT_speed']
+    )
+
+# --- 6) Clean duplicates by activity_id ----------------------
+    df_master.drop_duplicates(subset=['activity_id'], inplace=True)
+
+    return df_master
+
+
+
 # --- MAIN EXECUTION BLOCK ---
 
 if __name__ == "__main__":
@@ -386,18 +464,10 @@ if __name__ == "__main__":
     df_split_features = process_splits(df_activity_splits, max_hr_dict)
 
     # b) Merge these new features with our base activity table `df_clean`
-    df_master_new = pd.merge(df_clean, df_split_features, on="activity_id", how="left")
+    df_master_new = build_activity_master(df_clean, df_split_features, df_athletes_summary_new)
 
-    # c) Calculate final features directly on the master table (Training load and ACWR)
-    # This method is inspired by the TRIMP by zones method (I choose to ignore the classic TRIMP method as it requires the resting heart rate and the gender which we don't have)
-    df_master_new['hr_intensity'] = (
-        df_master_new["pct_Z1"].fillna(0) * 1 +
-        df_master_new["pct_Z2"].fillna(0) * 2 +
-        df_master_new["pct_Z3"].fillna(0) * 3 +
-        df_master_new["pct_Z4"].fillna(0) * 4
-    )
-    df_master_new['training_load'] = round(df_master_new['hr_intensity'] * (
-        (df_master_new['distance_activity'] + df_master_new['elevation_gain_activity'] * 10) / 100), 2)
+    #df_master_new['training_load'] = round(df_master_new['hr_intensity'] * (
+    #    (df_master_new['distance_activity'] + df_master_new['elevation_gain_activity'] * 10) / 100), 2)
     # --> I found this way in order to include elevation gain in the training load calculation, the x10 factor is arbitrary and can be adjusted
 
     # We will also use the ACWR (Acute Chronic Workload Ratio, different sources: Lolli et al., Griffin et al., Gabbett) concept to calculate a fatigue index:
@@ -409,12 +479,6 @@ if __name__ == "__main__":
 
     # Use of the EWMA method to calculate the acute and chronic load -> it gives more weight to recent activities and is, therefore, more accurate -->
     # (https://www.researchgate.net/publication/311860780_Calculating_acute_Chronic_workload_ratios_using_exponentially_weighted_moving_averages_provides_a_more_sensitive_indicator_of_injury_likelihood_than_rolling_averages#:~:text=The%20variance%20(R(2)),injury%20risk%20with%20higher%20ACWR.)
-    def ewma_load(x, span):
-        return x.ewm(span=span, min_periods=1).mean()
-
-    df_master_new['acute_load'] = df_master_new.groupby("athlete_id")['training_load'].transform(lambda x: ewma_load(x, span=7))
-    df_master_new['chronic_load'] = df_master_new.groupby("athlete_id")['training_load'].transform(lambda x: ewma_load(x, span=28))
-    df_master_new['acwr'] = round(df_master_new['acute_load'] / df_master_new['chronic_load'], 3)
 
     df_master_new['cv_speed'] = df_master_new['cv_speed'].fillna(0)
     df_master_new = df_master_new.drop(columns=['splits_metric', 'best_efforts', 'acute_load', 'chronic_load', 'hr_intensity'])
