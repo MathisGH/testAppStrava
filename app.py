@@ -183,7 +183,7 @@ def create_acwr_gauge(acwr_value, previous_value=None):
             }
         }
     ))
-    fig.update_layout(height=300, margin={'t':30, 'b':30, 'l':30, 'r':30})
+    fig.update_layout(height=200, margin={'t':30, 'b':30, 'l':30, 'r':30})
     return fig
 
 
@@ -248,14 +248,8 @@ if 'access_token' in st.session_state:
             columns_to_show = ["sport_type", "distance_activity", "moving_time_activity", "elevation_gain_activity", "average_speed_km_h_activity", "average_heartrate_activity", "training_load", "start_date"]
             st.dataframe(df_athlete[columns_to_show].head(10))
 
-            st.subheader("Your cumulative training load over the last 2 weeks")
-            st.line_chart(df_athlete, x='start_date', y='cumulative_training_load_2_weeks')
-
             st.subheader("Your cumulative training load over the last 4 weeks")
             st.line_chart(df_athlete, x='start_date', y='cumulative_training_load_4_weeks')
-
-            st.subheader("Your cumulative training load over the last 8 weeks")
-            st.line_chart(df_athlete, x='start_date', y='cumulative_training_load_8_weeks')
 
     except FileNotFoundError:
         st.warning("Processed data file not found. Please connect your account first.")
