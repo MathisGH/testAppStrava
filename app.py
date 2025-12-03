@@ -155,7 +155,7 @@ activity_type = st.sidebar.multiselect(
 )
 
 
-# --- FONCTION POUR CRÉER LE CADRAN ACWR ---
+# --- ACWR ---
 def create_acwr_gauge(acwr_value, previous_value=None):
     fig = go.Figure(go.Indicator(
         mode="gauge+number+delta",
