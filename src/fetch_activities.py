@@ -26,7 +26,7 @@ CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET") # get the Strava secret token 
 os.makedirs(DATA_FOLDER, exist_ok=True)  # If the folder doesn't exist yet, create it
 
 def load_athletes(): # Load athletes DIRECTLY FROM GOOGLE SHEETS
-    """Connects to Google Sheets and fetches athlete data."""
+    """Connects to Google Sheets and fetches athlete data"""
     try:
         # Google Sheets Authentication
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -73,7 +73,6 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
     
     for athlete_id, athlete in athletes.items():
         logging.info(f"Fetching activities for {athlete['firstname']} {athlete['lastname']}")
-        # print(f"Fetching activities for {athlete['firstname']} {athlete['lastname']}") # Print version
         
         # Refresh the token
         athlete = refresh_token(athlete)
@@ -107,12 +106,10 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
             new_activities.extend(new_data)
             request_page_num += 1
             logging.info(f"Page {request_page_num} fetched: ({len(new_data)} new activities)")
-            # print(f"Page {request_page_num} fetched: ({len(new_data)} new activities)")
 
             # Stop the loop if we reach the quota and wait 15 minutes
             if request_page_num % 290 == 0:
                 logging.warning("API limit reached, sleeping 15 minutes...")
-                # print("API limit reached, sleeping 15 minutes...")
                 time.sleep(900)
 
         # Fetch details of new activities
@@ -123,7 +120,6 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
             activity.update(details)
             detailed_activities.append(activity)
             logging.info(f"Details fetched for activity {activity_id}")
-            # print(f"Details fetched for activity {activity_id}")
             time.sleep(1)  # Pause to respect the quotas
 
         # CSV update
@@ -131,10 +127,9 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
             df_new = pd.DataFrame(detailed_activities)
             df_final = pd.concat([df_existing, df_new], ignore_index=True)
             full_id = f"{athlete_id}_{athlete['firstname']}_{athlete['lastname']}"
-            df_final["athlete_id"] = full_id
+            df_final["athlete_id"] = int(full_id)
             df_final.to_csv(file_path, index=False)
             logging.info(f"{len(detailed_activities)} new activities saved for {athlete['firstname']}")
-            # print(f"{len(detailed_activities)} new activities saved for {athlete['firstname']}")
 
 if __name__ == "__main__":
     fetch_activities()
