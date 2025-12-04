@@ -321,7 +321,7 @@ def generate_athlete_stats(df_clean, df_best_efforts, manual_stats_path):
 
     # VDOT estimation
     for dist_m, label in [(5000, 'PB_5km'), (10000, 'PB_10km'), (21097, 'PB_21.1km'), (42195, 'PB_42.2km')]:
-        vdot_col = f'VDOT_{label.split("_")[0]}'
+        vdot_col = f'VDOT_{label.split("_")[1]}'
         df_athletes_summary[vdot_col] = df_athletes_summary.apply(
             lambda row: calculate_vdot(dist_m, row[label]*60) if row[label] > 0 else None, axis=1)
 
@@ -411,6 +411,8 @@ def build_activity_master(df_clean, df_split_features, df_athletes_summary_new):
 # --- MAIN EXECUTION BLOCK ---
 
 if __name__ == "__main__":
+    BATCH_SIZE = 100 # Instead of doing all at once, we'll proceed with batches so that we can stop the script at every time (before the end) without losing what I've been done
+
     # --- 0. PATHS & DIRECTORIES ---
     BASE_DIR = Path(__file__).resolve().parents[1]
     DATA_PATH = BASE_DIR / "data" / "raw"
@@ -446,146 +448,177 @@ if __name__ == "__main__":
         # print("No new activities detected -> Pipeline finished")
         exit(0)
 
-    # --- 4. CLEANING & BASIC DATA EXTRACTION ---
-    logging.info("Step 3: Cleaning activities and processing best efforts...")
-    # print("Step 3: Cleaning activities and processing best efforts...")
-    df_clean, _ = clean_activities(df_new.copy())
-    df_best_efforts, df_activity_splits = process_best_efforts(df_new.copy())
+    # Splitting into batches
+    batches = [
+        df_new.iloc[i:i+BATCH_SIZE]
+        for i in range(0, len(df_new), BATCH_SIZE)
+    ]
 
-    # --- 5. GENERATE ATHLETE SUMMARY TABLE ---
-    logging.info("Step 4: Generating athlete summary statistics...")
-    # print("Step 4: Generating athlete summary statistics...")
-    df_athletes_summary_new = generate_athlete_stats(df_clean, df_best_efforts, MANUAL_STATS_PATH)
+    logging.info(f"Processing {len(df_new)} new activities in {len(batches)} batches of {BATCH_SIZE}")
 
-    # --- 6. CREATE/UPDATE MASTER TABLE ---
-    logging.info("Step 5: Creating the 'activities_master' table for new activities...")
-    # print("Step 5: Creating the 'activities_master' table for new activities...")
-
-    # a) Create activity-level features from splits (CV speed, % HR zones)
-    max_hr_dict = df_athletes_summary_new.set_index("athlete_id")["max_hr"].to_dict()
-    df_split_features = process_splits(df_activity_splits, max_hr_dict)
-
-    # b) Merge these new features with our base activity table `df_clean`
-    df_master_new = build_activity_master(df_clean, df_split_features, df_athletes_summary_new)
-
-    #df_master_new['training_load'] = round(df_master_new['hr_intensity'] * (
-    #    (df_master_new['distance_activity'] + df_master_new['elevation_gain_activity'] * 10) / 100), 2)
-    # --> I found this way in order to include elevation gain in the training load calculation, the x10 factor is arbitrary and can be adjusted
-
-    # We will also use the ACWR (Acute Chronic Workload Ratio, different sources: Lolli et al., Griffin et al., Gabbett) concept to calculate a fatigue index:
-    # the ratio of the last 7 days of training load to the last 28 days (21 days is also used in some studies)
-    # How to interpret it? -> 
-    # Below 0.8 = undertraining
-    # 0.8 to 1.3 = optimal zone
-    # Above 1.5 = overtraining, risk of injury increases considerably (Gabbett, 2018)
-
-    # Use of the EWMA method to calculate the acute and chronic load -> it gives more weight to recent activities and is, therefore, more accurate -->
-    # (https://www.researchgate.net/publication/311860780_Calculating_acute_Chronic_workload_ratios_using_exponentially_weighted_moving_averages_provides_a_more_sensitive_indicator_of_injury_likelihood_than_rolling_averages#:~:text=The%20variance%20(R(2)),injury%20risk%20with%20higher%20ACWR.)
-
-    df_master_new['cv_speed'] = df_master_new['cv_speed'].fillna(0)
-    df_master_new = df_master_new.drop(columns=['splits_metric', 'best_efforts', 'acute_load', 'chronic_load', 'hr_intensity'])
-
-    # d) Compute the cumulative percentage of time spent in each zone (to change for cycling and swimming later)
-    # Time in each zone (in seconds)
-    df_master_new["time_Z1"] = df_master_new["pct_Z1"] * df_master_new["moving_time_activity"]
-    df_master_new["time_Z2"] = df_master_new["pct_Z2"] * df_master_new["moving_time_activity"]
-    df_master_new["time_Z3"] = df_master_new["pct_Z3"] * df_master_new["moving_time_activity"]
-    df_master_new["time_Z4"] = df_master_new["pct_Z4"] * df_master_new["moving_time_activity"]
-
-    # Cumulative time per athlete
-    df_master_new["cumulative_time"] = df_master_new.groupby("athlete_id")["moving_time_activity"].cumsum()
-    df_master_new["cumulative_Z1"] = df_master_new.groupby("athlete_id")["time_Z1"].cumsum()
-    df_master_new["cumulative_Z2"] = df_master_new.groupby("athlete_id")["time_Z2"].cumsum()
-    df_master_new["cumulative_Z3"] = df_master_new.groupby("athlete_id")["time_Z3"].cumsum()
-    df_master_new["cumulative_Z4"] = df_master_new.groupby("athlete_id")["time_Z4"].cumsum()
-
-    # Cumulative percentage of time spent in each zone
-    df_master_new["pct_time_Z1"] = (df_master_new["cumulative_Z1"] / df_master_new["cumulative_time"] * 100).round(2)
-    df_master_new["pct_time_Z2"] = (df_master_new["cumulative_Z2"] / df_master_new["cumulative_time"] * 100).round(2)
-    df_master_new["pct_time_Z3"] = (df_master_new["cumulative_Z3"] / df_master_new["cumulative_time"] * 100).round(2)
-    df_master_new["pct_time_Z4"] = (df_master_new["cumulative_Z4"] / df_master_new["cumulative_time"] * 100).round(2)
-
-    # Cumulative percentage during the last 30 and 60 days
-    def pct_time_last_days(df, days):
-        df = df.copy()
-        results = []
-
-        for athlete_id, group in df.groupby("athlete_id"):
-            group = group.sort_values("start_date").set_index("start_date")
-
-            rolling_time = group["moving_time_activity"].rolling(f"{days}D").sum()
-            rolling_Z1   = group["time_Z1"].rolling(f"{days}D").sum()
-            rolling_Z2   = group["time_Z2"].rolling(f"{days}D").sum()
-            rolling_Z3   = group["time_Z3"].rolling(f"{days}D").sum()
-            rolling_Z4   = group["time_Z4"].rolling(f"{days}D").sum()
-
-            pct_Z1 = (rolling_Z1 / rolling_time * 100).fillna(0).round(2)
-            pct_Z2 = (rolling_Z2 / rolling_time * 100).fillna(0).round(2)
-            pct_Z3 = (rolling_Z3 / rolling_time * 100).fillna(0).round(2)
-            pct_Z4 = (rolling_Z4 / rolling_time * 100).fillna(0).round(2)
-
-            tmp = pd.DataFrame({
-                "athlete_id": athlete_id,
-                f"pct_time_Z1_last_{days}d": pct_Z1,
-                f"pct_time_Z2_last_{days}d": pct_Z2,
-                f"pct_time_Z3_last_{days}d": pct_Z3,
-                f"pct_time_Z4_last_{days}d": pct_Z4,
-            }, index=group.index)
-
-            results.append(tmp)
-
-        return pd.concat(results)
-
-    pct_30d = pct_time_last_days(df_master_new, 30).drop(columns=["athlete_id"])
-    pct_60d = pct_time_last_days(df_master_new, 60).drop(columns=["athlete_id"])
-
-    df_master_new = df_master_new.join(pct_30d, on="start_date")
-    df_master_new = df_master_new.join(pct_60d, on="start_date")
-
-    df_master_new = df_master_new.drop(columns=["time_Z1", "time_Z2", "time_Z3", "time_Z4", "cumulative_time", "cumulative_Z1", "cumulative_Z2", "cumulative_Z3", "cumulative_Z4"])
-
-    # e) Compute the cumulative training load for the last 2, 4 and 8 weeks
-    def cumulative_load_last_weeks(df):
-        df["start_date"] = pd.to_datetime(df["start_date"])
-        df = df.sort_values(by=["athlete_id", "start_date"])
-        df = df.set_index("start_date")
-        df['cumulative_training_load_2_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('14D', min_periods=1).sum().reset_index(level=0, drop=True))
-        df['cumulative_training_load_4_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('28D', min_periods=1).sum().reset_index(level=0, drop=True))
-        df['cumulative_training_load_8_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('56D', min_periods=1).sum().reset_index(level=0, drop=True))
-        df = df.reset_index()
-
-        return df
-
-    df_master_new = cumulative_load_last_weeks(df_master_new)
+    for batch_idx, df_batch in enumerate(batches, 1):
+        logging.info(f"--- Processing batch {batch_idx}/{len(batches)} ({len(df_batch)} activities) ---")
 
 
-    # --- 7. ADD WEATHER DATA ---
-    logging.info("Step 6: Fetching weather data for new activities...")
-    # print("Step 6: Fetching weather data for new activities...")
-    df_master_new['start_date'] = pd.to_datetime(df_master_new['start_date'])
-    weather_data = df_master_new.apply(get_weather_for_activity, axis=1)
-    df_master_new = pd.concat([df_master_new, weather_data], axis=1)
-    df_master = df_master_new.drop(columns=['start_latlng'])
+        # --- 4. CLEANING & BASIC DATA EXTRACTION ---
+        logging.info("Step 3: Cleaning activities and processing best efforts...")
+        # print("Step 3: Cleaning activities and processing best efforts...")
+        df_clean, _ = clean_activities(df_batch.copy())
+        df_best_efforts, df_activity_splits = process_best_efforts(df_batch.copy())
 
-    # --- 8. MERGE NEW WITH EXISTING DATA ---
-    df_master_final = pd.concat([df_master_existing, df_master_new], ignore_index=True)
-    df_master_final.drop_duplicates(subset=['activity_id'], inplace=True)
+        # --- 5. GENERATE ATHLETE SUMMARY TABLE ---
+        logging.info("Step 4: Generating athlete summary statistics...")
+        # print("Step 4: Generating athlete summary statistics...")
+        df_athletes_summary_new = generate_athlete_stats(df_clean, df_best_efforts, MANUAL_STATS_PATH)
+
+        # --- 6. CREATE/UPDATE MASTER TABLE ---
+        logging.info("Step 5: Creating the 'activities_master' table for new activities...")
+        # print("Step 5: Creating the 'activities_master' table for new activities...")
+
+        # a) Create activity-level features from splits (CV speed, % HR zones)
+        max_hr_dict = df_athletes_summary_new.set_index("athlete_id")["max_hr"].to_dict()
+        df_split_features = process_splits(df_activity_splits, max_hr_dict)
+
+        # b) Merge these new features with our base activity table `df_clean`
+        df_master_new = build_activity_master(df_clean, df_split_features, df_athletes_summary_new)
+
+        #df_master_new['training_load'] = round(df_master_new['hr_intensity'] * (
+        #    (df_master_new['distance_activity'] + df_master_new['elevation_gain_activity'] * 10) / 100), 2)
+        # --> I found this way in order to include elevation gain in the training load calculation, the x10 factor is arbitrary and can be adjusted
+
+        # We will also use the ACWR (Acute Chronic Workload Ratio, different sources: Lolli et al., Griffin et al., Gabbett) concept to calculate a fatigue index:
+        # the ratio of the last 7 days of training load to the last 28 days (21 days is also used in some studies)
+        # How to interpret it? -> 
+        # Below 0.8 = undertraining
+        # 0.8 to 1.3 = optimal zone
+        # Above 1.5 = overtraining, risk of injury increases considerably (Gabbett, 2018)
+
+        # Use of the EWMA method to calculate the acute and chronic load -> it gives more weight to recent activities and is, therefore, more accurate -->
+        # (https://www.researchgate.net/publication/311860780_Calculating_acute_Chronic_workload_ratios_using_exponentially_weighted_moving_averages_provides_a_more_sensitive_indicator_of_injury_likelihood_than_rolling_averages#:~:text=The%20variance%20(R(2)),injury%20risk%20with%20higher%20ACWR.)
+
+        df_master_new['cv_speed'] = df_master_new['cv_speed'].fillna(0)
+        df_master_new = df_master_new.drop(columns=['splits_metric', 'best_efforts', 'acute_load', 'chronic_load', 'hr_intensity'])
+
+        # d) Compute the cumulative percentage of time spent in each zone (to change for cycling and swimming later)
+        # Time in each zone (in seconds)
+        df_master_new["time_Z1"] = df_master_new["pct_Z1"] * df_master_new["moving_time_activity"]
+        df_master_new["time_Z2"] = df_master_new["pct_Z2"] * df_master_new["moving_time_activity"]
+        df_master_new["time_Z3"] = df_master_new["pct_Z3"] * df_master_new["moving_time_activity"]
+        df_master_new["time_Z4"] = df_master_new["pct_Z4"] * df_master_new["moving_time_activity"]
+
+        # Cumulative time per athlete
+        df_master_new["cumulative_time"] = df_master_new.groupby("athlete_id")["moving_time_activity"].cumsum()
+        df_master_new["cumulative_Z1"] = df_master_new.groupby("athlete_id")["time_Z1"].cumsum()
+        df_master_new["cumulative_Z2"] = df_master_new.groupby("athlete_id")["time_Z2"].cumsum()
+        df_master_new["cumulative_Z3"] = df_master_new.groupby("athlete_id")["time_Z3"].cumsum()
+        df_master_new["cumulative_Z4"] = df_master_new.groupby("athlete_id")["time_Z4"].cumsum()
+
+        # Cumulative percentage of time spent in each zone
+        df_master_new["pct_time_Z1"] = (df_master_new["cumulative_Z1"] / df_master_new["cumulative_time"] * 100).round(2)
+        df_master_new["pct_time_Z2"] = (df_master_new["cumulative_Z2"] / df_master_new["cumulative_time"] * 100).round(2)
+        df_master_new["pct_time_Z3"] = (df_master_new["cumulative_Z3"] / df_master_new["cumulative_time"] * 100).round(2)
+        df_master_new["pct_time_Z4"] = (df_master_new["cumulative_Z4"] / df_master_new["cumulative_time"] * 100).round(2)
+
+        # Cumulative percentage during the last 30 and 60 days
+        def pct_time_last_days(df, days):
+            df = df.copy()
+            results = []
+
+            for athlete_id, group in df.groupby("athlete_id"):
+                group = group.sort_values("start_date").set_index("start_date")
+
+                rolling_time = group["moving_time_activity"].rolling(f"{days}D").sum()
+                rolling_Z1   = group["time_Z1"].rolling(f"{days}D").sum()
+                rolling_Z2   = group["time_Z2"].rolling(f"{days}D").sum()
+                rolling_Z3   = group["time_Z3"].rolling(f"{days}D").sum()
+                rolling_Z4   = group["time_Z4"].rolling(f"{days}D").sum()
+
+                pct_Z1 = (rolling_Z1 / rolling_time * 100).fillna(0).round(2)
+                pct_Z2 = (rolling_Z2 / rolling_time * 100).fillna(0).round(2)
+                pct_Z3 = (rolling_Z3 / rolling_time * 100).fillna(0).round(2)
+                pct_Z4 = (rolling_Z4 / rolling_time * 100).fillna(0).round(2)
+
+                tmp = pd.DataFrame({
+                    "athlete_id": athlete_id,
+                    f"pct_time_Z1_last_{days}d": pct_Z1,
+                    f"pct_time_Z2_last_{days}d": pct_Z2,
+                    f"pct_time_Z3_last_{days}d": pct_Z3,
+                    f"pct_time_Z4_last_{days}d": pct_Z4,
+                }, index=group.index)
+
+                results.append(tmp)
+
+            return pd.concat(results)
+
+        pct_30d = pct_time_last_days(df_master_new, 30).drop(columns=["athlete_id"])
+        pct_60d = pct_time_last_days(df_master_new, 60).drop(columns=["athlete_id"])
+
+        df_master_new = df_master_new.join(pct_30d, on="start_date")
+        df_master_new = df_master_new.join(pct_60d, on="start_date")
+
+        df_master_new = df_master_new.drop(columns=["time_Z1", "time_Z2", "time_Z3", "time_Z4", "cumulative_time", "cumulative_Z1", "cumulative_Z2", "cumulative_Z3", "cumulative_Z4"])
+
+        # e) Compute the cumulative training load for the last 2, 4 and 8 weeks
+        def cumulative_load_last_weeks(df):
+            df["start_date"] = pd.to_datetime(df["start_date"])
+            df = df.sort_values(by=["athlete_id", "start_date"])
+            df = df.set_index("start_date")
+            df['cumulative_training_load_2_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('14D', min_periods=1).sum().reset_index(level=0, drop=True))
+            df['cumulative_training_load_4_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('28D', min_periods=1).sum().reset_index(level=0, drop=True))
+            df['cumulative_training_load_8_weeks'] = (df.groupby('athlete_id')['training_load'].rolling('56D', min_periods=1).sum().reset_index(level=0, drop=True))
+            df = df.reset_index()
+
+            return df
+
+        df_master_new = cumulative_load_last_weeks(df_master_new)
 
 
-    # --- 9. SAVE UPDATED DATA ---
-    logging.info("Step 7: Saving updated datasets...")
-    # print("Step 7: Saving updated datasets...")
-    df_master_final.to_csv(OUTPUT_PATH / "activities_master.csv", index=False)
+        # --- 7. ADD WEATHER DATA ---
+        logging.info("Step 6: Fetching weather data for new activities...")
+        # print("Step 6: Fetching weather data for new activities...")
+        df_master_new['start_date'] = pd.to_datetime(df_master_new['start_date'])
+        weather_data = df_master_new.apply(get_weather_for_activity, axis=1)
+        df_master_new = pd.concat([df_master_new, weather_data], axis=1)
+        df_master = df_master_new.drop(columns=['start_latlng'])
 
-    # Append / update the other tables too
-    df_best_efforts.to_csv(OUTPUT_PATH / "best_efforts.csv", mode="a", header=not (OUTPUT_PATH / "best_efforts.csv").exists(), index=False)
-    df_activity_splits.to_csv(OUTPUT_PATH / "activity_splits.csv", mode="a", header=not (OUTPUT_PATH / "activity_splits.csv").exists(), index=False)
-    df_athletes_summary_new.to_csv(OUTPUT_PATH / "athletes_summary.csv", mode="a", header=not (OUTPUT_PATH / "athletes_summary.csv").exists(), index=False)
+        # --- 8. SAVE INCREMENTALLY (ONLY NEW ROWS) ---
 
-    # Optionally push to SQL
-    # df_master_new.to_sql("activities_master", engine, if_exists="append", index=False)
+        logging.info("Step 7: Saving batch results...")
 
-    logging.info("Pipeline completed successfully!")
-    # print("Pipeline completed successfully!")
-    logging.info(f"Files saved in: {OUTPUT_PATH}")
-    # print(f"Files saved in: {OUTPUT_PATH}")
+        # Save master table (append only)
+        master_path = OUTPUT_PATH / "activities_master.csv"
+        df_master_new.to_csv(
+            master_path,
+            mode="a",
+            header=not master_path.exists(),
+            index=False
+        )
+
+        # Save best efforts incrementally
+        best_efforts_path = OUTPUT_PATH / "best_efforts.csv"
+        df_best_efforts.to_csv(
+            best_efforts_path,
+            mode="a",
+            header=not best_efforts_path.exists(),
+            index=False
+        )
+
+        # Save splits incrementally
+        splits_path = OUTPUT_PATH / "activity_splits.csv"
+        df_activity_splits.to_csv(
+            splits_path,
+            mode="a",
+            header=not splits_path.exists(),
+            index=False
+        )
+
+        # Save athlete stats incrementally
+        athletes_path = OUTPUT_PATH / "athletes_summary.csv"
+        df_athletes_summary_new.to_csv(
+            athletes_path,
+            mode="a",
+            header=not athletes_path.exists(),
+            index=False
+        )
+
+        logging.info(f"Batch {batch_idx}/{len(batches)} saved successfully.")
