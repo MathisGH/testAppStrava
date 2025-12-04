@@ -10,6 +10,7 @@ from dotenv import load_dotenv # type: ignore
 from sqlalchemy import create_engine
 import requests
 import logging
+from concurrent.futures import ThreadPoolExecutor
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- CONFIGURATION & INITIALIZATION ---
@@ -208,6 +209,18 @@ def get_weather_for_activity(activity_row):
         # print(f"Erreur API pour l'activité {activity_row.get('activity_id', 'unknown')}: {e}")
         return pd.Series({'temperature': None, 'humidity': None, 'apparent_temperature': None, 'precipitation': None, 'wind_speed': None})
 
+def fetch_weather_parallel(df, max_workers=20): # Parallelism 
+    """
+    Fetch weather data in parallel for all rows in df.
+    Each row is passed to get_weather_for_activity(row).
+    Returns a DataFrame with weather columns.
+    """
+    rows = [row for _, row in df.iterrows()]
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = list(executor.map(get_weather_for_activity, rows))
+
+    return pd.DataFrame(results)
 
 
 # --- FEATURE ENGINEERING FUNCTIONS ---
@@ -574,11 +587,12 @@ if __name__ == "__main__":
 
 
         # --- 7. ADD WEATHER DATA ---
-        logging.info("Step 6: Fetching weather data for new activities...")
-        # print("Step 6: Fetching weather data for new activities...")
+        logging.info("Step 6: Fetching weather data for new activities in parallel...")
         df_master_new['start_date'] = pd.to_datetime(df_master_new['start_date'])
-        weather_data = df_master_new.apply(get_weather_for_activity, axis=1)
-        df_master_new = pd.concat([df_master_new, weather_data], axis=1)
+        weather_data = fetch_weather_parallel(df_master_new, max_workers=20)
+        df_master_new = pd.concat([df_master_new.reset_index(drop=True),
+                                weather_data.reset_index(drop=True)], axis=1)
+
         df_master = df_master_new.drop(columns=['start_latlng'])
 
         # --- 8. SAVE INCREMENTALLY (ONLY NEW ROWS) ---
