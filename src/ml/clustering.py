@@ -60,9 +60,8 @@ def load_or_train_kmeans(X_scaled, n_clusters=5, model_path="models"):
 # ------------------------------------------------------
 def prepare_X(df):
     X = df[FEATURE_COLUMNS].replace([np.inf, -np.inf], np.nan)
-    X_clean = X.dropna().reset_index(drop=True)
-    df_clean = df.loc[X_clean.index].reset_index(drop=True)
-    return df_clean, X_clean
+    X_filled = X.fillna(0)
+    return df.reset_index(drop=True), X_filled
 
 
 # ------------------------------------------------------
@@ -109,7 +108,8 @@ def run_clustering(input_path="data/processed/activities_master.csv",
 # SCRIPT ENTRY POINT
 # ------------------------------------------------------
 if __name__ == "__main__":
-    BASE_DIR = Path(__file__).resolve().parents[1]
+    BASE_DIR = Path(__file__).resolve().parents[2]
+    print(BASE_DIR)
     INPUT = BASE_DIR / "data" / "processed" / "activities_master.csv"
     OUTPUT = BASE_DIR / "data" / "processed" / "activities_master_with_clusters.csv"
     MODELS = BASE_DIR / "models"
