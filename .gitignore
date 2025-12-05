@@ -3,7 +3,7 @@
 *.xlsx
 *.csv
 data/
-src/archived_scripts_and_files/
+archived_scripts_and_files/
 google_service_account.json
 *.pem
 
