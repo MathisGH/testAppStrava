@@ -126,10 +126,10 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
         if detailed_activities:
             df_new = pd.DataFrame(detailed_activities)
             df_final = pd.concat([df_existing, df_new], ignore_index=True)
-            full_id = f"{athlete_id}_{athlete['firstname']}_{athlete['lastname']}"
-            df_final["athlete_id"] = int(full_id)
+            df_final["athlete_id"] = int(athlete_id)
             df_final.to_csv(file_path, index=False)
             logging.info(f"{len(detailed_activities)} new activities saved for {athlete['firstname']}")
+
 
 if __name__ == "__main__":
     fetch_activities()
