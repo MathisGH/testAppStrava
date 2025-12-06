@@ -180,7 +180,7 @@ def create_acwr_gauge(acwr_value, previous_value=None):
             }
         }
     ))
-    fig.update_layout(height=300, margin={'t':30, 'b':30, 'l':30, 'r':30})
+    fig.update_layout(height=200, margin={'t':30, 'b':30, 'l':30, 'r':30})
     return fig
 
 
