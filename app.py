@@ -157,7 +157,7 @@ activity_type = st.sidebar.multiselect(
 st.metric("using1", "st.metric1")
 st.metric("using2", "st.metric2")
 
-col1, col2 = st.columns()
+col1, col2 = st.columns(2)
 col1.metric("using1", "st.columns1")
 col2.metric("using2", "st.columns2")
 
