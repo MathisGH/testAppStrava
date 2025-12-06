@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import pandas as pd
 import requests
@@ -12,7 +11,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from dotenv import load_dotenv
 from oauth2client.service_account import ServiceAccountCredentials
-
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -34,7 +32,6 @@ GOOGLE_SHEET_NAME = "Athletes Strava"
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-# Après modification
 SERVICE_ACCOUNT_FILE = "/home/ec2-user/strava-app/testAppStrava/creds.json"
 if os.path.exists(SERVICE_ACCOUNT_FILE):
     creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
@@ -183,7 +180,7 @@ def create_acwr_gauge(acwr_value, previous_value=None):
             }
         }
     ))
-    fig.update_layout(height=200, margin={'t':30, 'b':30, 'l':30, 'r':30})
+    fig.update_layout(height=300, margin={'t':30, 'b':30, 'l':30, 'r':30})
     return fig
 
 
