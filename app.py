@@ -7,7 +7,6 @@ import subprocess
 import sys
 import gspread
 import joblib
-import plotly.express as px
 import plotly.graph_objects as go
 from dotenv import load_dotenv
 from oauth2client.service_account import ServiceAccountCredentials
@@ -25,8 +24,6 @@ st.set_page_config(layout="wide")
 
 CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")
 CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET")
-# REDIRECT_URI = "http://localhost:8501" # For local testing --> change for deployment
-# REDIRECT_URI = "https://testappstrava.streamlit.app/"
 REDIRECT_URI = os.getenv("STRAVA_REDIRECT_URL")
 GOOGLE_SHEET_NAME = "Athletes Strava"
 
@@ -137,42 +134,6 @@ def handle_callback(code):
         st.error(f"An error occurred during authentication: {e}")
         return False
 
-
-# --- MAIN APP ---
-
-st.title("Strava Performance Dashboard")
-
-# --- User interface improvements ---
-st.sidebar.title("Filters & Settings")
-st.sidebar.write("Use the filters below to customize your dashboard")
-activity_type = st.sidebar.multiselect(
-    "Select Activity Types",
-    options=["Run", "Ride", "Swim", "Workout", "Hike"],
-    default=["Run"]
-)
-
-
-# --- Tests ---
-
-st.metric("using1", "st.metric1")
-st.metric("using2", "st.metric2")
-
-col1, col2 = st.columns(2)
-col1.metric("using1", "st.columns1")
-col2.metric("using2", "st.columns2")
-
-master_file_path = "data/processed/activities_master.csv"
-df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
-for activity in df_master.head(10):
-    date = "ok"
-    with st.expander(f"Activity on {date}"):
-        st.metric("Using st.expander", "test")
-        st.metric("Pace moyen", "4:50")
-
-
-
-
-
 # --- ACWR ---
 def create_acwr_gauge(acwr_value, previous_value=None):
     fig = go.Figure(go.Indicator(
@@ -205,6 +166,20 @@ def create_acwr_gauge(acwr_value, previous_value=None):
     return fig
 
 
+# --- MAIN APP ---
+
+# --- PAGE TITLE ---
+st.title("Strava Performance Dashboard")
+
+# --- SIDEBAR ---
+st.sidebar.title("Filters & Settings")
+st.sidebar.write("Use the filters below to customize your dashboard")
+activity_type = st.sidebar.multiselect(
+    "Select Activity Types",
+    options=["Run", "Ride", "Swim", "Workout", "Hike"],
+    default=["Run"]
+)
+
 # Handle the authentication callback IF it's a new login
 auth_code = st.query_params.get("code")
 if auth_code and 'access_token' not in st.session_state:
@@ -235,7 +210,7 @@ if auth_code and 'access_token' not in st.session_state:
         st.query_params.clear()
         st.button("Display my dashboard")
 
-# Display the dashboard (OR the login button)
+# --- MAIN DASHBOARD ---
 if 'access_token' in st.session_state:
     st.header("Welcome!")
     athlete_name = st.session_state['athlete_info']['firstname']
@@ -268,6 +243,24 @@ if 'access_token' in st.session_state:
 
             st.subheader("Your cumulative training load over the last 4 weeks")
             st.line_chart(df_athlete, x='start_date', y='cumulative_training_load_4_weeks')
+
+            # --- Tests ---
+
+            st.metric("using1", "st.metric1")
+            st.metric("using2", "st.metric2")
+
+            col1, col2 = st.columns(2)
+            col1.metric("using1", "st.columns1")
+            col2.metric("using2", "st.columns2")
+
+            master_file_path = "data/processed/activities_master.csv"
+            df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
+            df_sample = df_master[df_master["athlete_id"]==]
+            for i in range(10):
+                date = "ok"
+                with st.expander(f"Activity on {date}"):
+                    st.metric("Using st.expander", "test")
+                    st.metric("Pace moyen", "4:50")
 
     except FileNotFoundError:
         st.warning("Processed data file not found. Please connect your account first.")
