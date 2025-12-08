@@ -244,7 +244,7 @@ if 'access_token' in st.session_state:
             st.subheader("Your cumulative training load over the last 4 weeks")
             st.line_chart(df_athlete, x='start_date', y='cumulative_training_load_4_weeks')
 
-            # --- Tests ---
+            # --- TESTS START --- 
 
             st.metric("using1", "st.metric1")
             st.metric("using2", "st.metric2")
@@ -253,14 +253,25 @@ if 'access_token' in st.session_state:
             col1.metric("using1", "st.columns1")
             col2.metric("using2", "st.columns2")
 
-            master_file_path = "data/processed/activities_master.csv"
-            df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
+            master_file_path = "data/processed/activities_master_with_clusters.csv"
+            df_sample = pd.read_csv(master_file_path, parse_dates=['start_date'])
             df_sample = df_master[df_master["athlete_id"]==athlete_id]
-            for i in range(10):
-                date = "ok"
-                with st.expander(f"Activity on {date}"):
-                    st.metric("Using st.expander", "test")
-                    st.metric("Pace moyen", "4:50")
+            
+            st.subheader("Your last 10 activities")
+
+            for _, row in df_sample.head(10).iterrows():
+                with st.expander(f"{row['sport_type']} — {row['start_date'].date()}"):
+                    st.write(f"**Distance:** {row['distance_activity']/1000:.2f} km")
+                    st.write(f"**Duration:** {row['moving_time_activity']/60:.1f} min")
+                    st.write(f"**Elevation:** {row['elevation_gain_activity']} m")
+                    st.write(f"**Avg Pace:** {60 / row['average_speed_km_h_activity']:.1f} min/km")
+                    st.write(f"**Training Load:** {row['training_load']:.1f}")
+                    st.write(f"**Average Heartrate:** {row['average_heartrate_activity']:.1f}")
+                    st.write(f"**Activity type:** {row['cluster']:.1f}")
+
+
+
+            # --- TESTS END ---
 
     except FileNotFoundError:
         st.warning("Processed data file not found. Please connect your account first.")
