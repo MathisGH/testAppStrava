@@ -164,14 +164,10 @@ col2.metric("using2", "st.columns2")
 master_file_path = "data/processed/activities_master.csv"
 df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
 for activity in df_master.head(10):
-    date = activity['start_date']
+    date = "ok"
     with st.expander(f"Activity on {date}"):
         st.metric("Using st.expander", "test")
         st.metric("Pace moyen", "4:50")
-        st.line_chart(pd.DataFrame({
-            'Distance (km)': list(range(1, 19)),
-            'Pace (min/km)': [5, 4.8, 4.9, 5.1, 4.7, 4.6, 4.8, 5, 4.9, 4.7, 4.6, 4.5, 4.8, 5, 4.9, 4.7, 4.6, 4.5]
-        }).set_index('Distance (km)'))
 
 
 
