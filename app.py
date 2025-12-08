@@ -255,7 +255,7 @@ if 'access_token' in st.session_state:
 
             master_file_path = "data/processed/activities_master.csv"
             df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
-            df_sample = df_master[df_master["athlete_id"]==]
+            df_sample = df_master[df_master["athlete_id"]==athlete_id]
             for i in range(10):
                 date = "ok"
                 with st.expander(f"Activity on {date}"):
