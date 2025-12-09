@@ -256,7 +256,7 @@ if 'access_token' in st.session_state:
 
             master_file_path = "data/processed/activities_master_with_clusters.csv"
             df_sample = pd.read_csv(master_file_path, parse_dates=['start_date'])
-            df_sample = df_master[df_master["athlete_id"]==athlete_id].sort_values(by='start_date', ascending=False)
+            df_sample = df_master[(df_master["athlete_id"]==athlete_id) & (df_master["sport_type"]=="Run")].sort_values(by='start_date', ascending=False)
 
             st.subheader("Your last 10 activities:")
 
