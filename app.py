@@ -236,7 +236,7 @@ if 'access_token' in st.session_state:
             st.plotly_chart(fig_gauge, use_container_width=True)
 
             st.subheader("Your Latest Activities")
-            df_athlete = df_athlete.sort_values(by="start_date", ascending=False)
+            df_athlete = df_athlete.sort_values(by="start_date", ascending=False).drop_duplicates(subset=["activity_id"])
 
             columns_to_show = ["sport_type", "distance_activity", "moving_time_activity", "elevation_gain_activity", "average_speed_km_h_activity", "average_heartrate_activity", "training_load", "start_date"]
             st.dataframe(df_athlete[columns_to_show].head(10))
@@ -255,19 +255,19 @@ if 'access_token' in st.session_state:
 
             master_file_path = "data/processed/activities_master_with_clusters.csv"
             df_sample = pd.read_csv(master_file_path, parse_dates=['start_date'])
-            df_sample = df_master[df_master["athlete_id"]==athlete_id]
-            
+            df_sample = df_master[df_master["athlete_id"]==athlete_id].sort_values(by='start_date', ascending=False)
+
             st.subheader("Your last 10 activities:")
 
             for _, row in df_sample.head(10).iterrows():
                 with st.expander(f"{row['sport_type']} — {row['start_date'].date()}"):
                     st.write(f"**Distance:** {row['distance_activity']/1000:.2f} km")
-                    # st.write(f"**Duration:** {row['moving_time_activity']/60:.1f} min")
-                    # st.write(f"**Elevation:** {row['elevation_gain_activity']} m")
-                    # st.write(f"**Avg Pace:** {60 / row['average_speed_km_h_activity']:.1f} min/km")
-                    # st.write(f"**Training Load:** {row['training_load']:.1f}")
-                    # st.write(f"**Average Heartrate:** {row['average_heartrate_activity']:.1f}")
-                    # st.write(f"**Activity type:** {row['cluster']:.1f}")
+                    st.write(f"**Duration:** {row['moving_time_activity']/60:.1f} min")
+                    st.write(f"**Elevation:** {row['elevation_gain_activity']} m")
+                    st.write(f"**Avg Pace:** {60 / row['average_speed_km_h_activity']:.1f} min/km")
+                    st.write(f"**Training Load:** {row['training_load']:.1f}")
+                    st.write(f"**Average Heartrate:** {row['average_heartrate_activity']:.1f}")
+                    st.write(f"**Activity type:** {row['cluster']:.1f}")
 
 
 
