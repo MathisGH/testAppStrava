@@ -163,7 +163,7 @@ def create_acwr_gauge(acwr_value, previous_value=None):
             }
         }
     ))
-    fig.update_layout(height=200, margin={'t':30, 'b':30, 'l':30, 'r':30})
+    fig.update_layout(height=st.session_state.get("gauge_height", 380), margin={'t':30, 'b':30, 'l':30, 'r':30}) # height responsive
     return fig
 
 
@@ -242,15 +242,17 @@ if 'access_token' in st.session_state:
             # Right column
             with right:
                 st.write("### HR Zones Distribution (last 60 days)")
+                latest = df_sorted.iloc[0]
+
                 zones = pd.DataFrame({
-                            "zone": ["Z1", "Z2", "Z3", "Z4"],
-                            "percentage": [
-                                df_sorted.head(0)["pct_time_Z1_last_60d"], 
-                                df_sorted.head(0)["pct_time_Z2_last_60d"], 
-                                df_sorted.head(0)["pct_time_Z3_last_60d"], 
-                                df_sorted.head(0)["pct_time_Z4_last_60d"]
-                            ]
-                        })
+                    "zone": ["Z1", "Z2", "Z3", "Z4"],
+                    "percentage": [
+                        latest["pct_time_Z1_last_60d"],
+                        latest["pct_time_Z2_last_60d"],
+                        latest["pct_time_Z3_last_60d"],
+                        latest["pct_time_Z4_last_60d"],
+                    ]
+                })
 
                 chart = (
                     alt.Chart(zones)
