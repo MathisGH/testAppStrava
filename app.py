@@ -227,14 +227,31 @@ if 'access_token' in st.session_state:
         if df_athlete.empty:
             st.warning("We couldn't find any processed activities for you yet.")
         else:
-            st.subheader("Your current training status (ACWR)")
-            df_sorted = df_athlete.sort_values('start_date', ascending=False)
-            
-            latest_acwr = df_sorted['acwr'].iloc[0] if not df_sorted.empty else 0
-            previous_acwr = df_sorted['acwr'].iloc[1] if len(df_sorted) > 1 else latest_acwr
+            left, right = st.columns(2)
+            # Left column
+            with left: # Left column
+                st.write("### HR Zones Distribution")
+                st.subheader("Your current training status (ACWR)")
+                df_sorted = df_athlete.sort_values('start_date', ascending=False)
+                
+                latest_acwr = df_sorted['acwr'].iloc[0] if not df_sorted.empty else 0
+                previous_acwr = df_sorted['acwr'].iloc[1] if len(df_sorted) > 1 else latest_acwr
 
-            fig_gauge = create_acwr_gauge(latest_acwr, previous_acwr)
-            st.plotly_chart(fig_gauge, use_container_width=True)
+                fig_gauge = create_acwr_gauge(latest_acwr, previous_acwr)
+                st.plotly_chart(fig_gauge, use_container_width=True)
+            
+            # Right column
+            with right:
+                st.write("### HR Zones Distribution")
+                zones = pd.DataFrame({
+                    "zone": ["Z1", "Z2", "Z3", "Z4"],
+                    "minutes": [
+                        df_athlete["pct_Z1"].sum() * df_athlete["moving_time_activity"].sum(),
+                        df_athlete["pct_Z2"].sum() * df_athlete["moving_time_activity"].sum(),
+                        df_athlete["pct_Z3"].sum() * df_athlete["moving_time_activity"].sum(),
+                        df_athlete["pct_Z4"].sum() * df_athlete["moving_time_activity"].sum(),
+                    ]
+                })
 
             st.subheader("Your Latest Activities")
             df_athlete = df_athlete.sort_values(by="start_date", ascending=False).drop_duplicates(subset=["activity_id"])
