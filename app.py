@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 from dotenv import load_dotenv
 from oauth2client.service_account import ServiceAccountCredentials
 from pathlib import Path
+import altair as alt
 
 BASE_DIR = Path(__file__).resolve().parent
 SRC_DIR = BASE_DIR / "src"
@@ -261,13 +262,42 @@ if 'access_token' in st.session_state:
 
             for _, row in df_sample.head(10).iterrows():
                 with st.expander(f"{row['sport_type']} — {row['start_date'].date()}"):
-                    st.write(f"**Distance:** {row['distance_activity']/1000:.2f} km")
-                    st.write(f"**Duration:** {row['moving_time_activity']/60:.1f} min")
-                    st.write(f"**Elevation:** {row['elevation_gain_activity']} m")
-                    st.write(f"**Avg Pace:** {60 / row['average_speed_km_h_activity']:.1f} min/km")
-                    st.write(f"**Training Load:** {row['training_load']:.1f}")
-                    st.write(f"**Average Heartrate:** {row['average_heartrate_activity']:.1f}")
-                    st.write(f"**Activity type:** {row['cluster']:.1f}")
+
+                    left, right = st.columns(2)
+
+                    # Left column
+                    with left: # Left column
+                        st.write(f"**Distance:** {row['distance_activity']/1000:.2f} km")
+                        st.write(f"**Duration:** {row['moving_time_activity']/60:.1f} hours")
+                        st.write(f"**Elevation:** {row['elevation_gain_activity']} m")
+                        st.write(f"**Avg Pace:** {60 / row['average_speed_km_h_activity']:.1f} min/km")
+                        st.write(f"**Training Load:** {row['training_load']:.1f}")
+                        st.write(f"**Average Heartrate:** {row['average_heartrate_activity']:.1f}")
+                        # st.write(f"**Activity type:** {row['cluster']:.1f}") to fix (rerun scripts in the server)
+                    
+                    # Right column
+                    with right:
+                        st.write("### HR Zones")
+                        zones = pd.DataFrame({
+                            "zone": ["Z1", "Z2", "Z3", "Z4"],
+                            "minutes": [
+                                row["pct_Z1"], 
+                                row["pct_Z2"], 
+                                row["pct_Z3"], 
+                                row["pct_Z4"]
+                            ]
+                        })
+
+                        chart = (
+                            alt.Chart(zones)
+                            .mark_arc()
+                            .encode(
+                                theta="minutes",
+                                color="zone",
+                                tooltip=["zone", "minutes"]
+                            )
+                        )
+                        st.altair_chart(chart, use_container_width=True)
 
 
 
