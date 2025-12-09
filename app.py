@@ -230,8 +230,7 @@ if 'access_token' in st.session_state:
             left, right = st.columns(2)
             # Left column
             with left: # Left column
-                st.write("### HR Zones Distribution")
-                st.subheader("Your current training status (ACWR)")
+                st.write("### Your current training status (ACWR)")
                 df_sorted = df_athlete.sort_values('start_date', ascending=False)
                 
                 latest_acwr = df_sorted['acwr'].iloc[0] if not df_sorted.empty else 0
@@ -242,16 +241,27 @@ if 'access_token' in st.session_state:
             
             # Right column
             with right:
-                st.write("### HR Zones Distribution")
+                st.write("### HR Zones Distribution (last 60 days)")
                 zones = pd.DataFrame({
-                    "zone": ["Z1", "Z2", "Z3", "Z4"],
-                    "minutes": [
-                        df_athlete["pct_Z1"].sum() * df_athlete["moving_time_activity"].sum(),
-                        df_athlete["pct_Z2"].sum() * df_athlete["moving_time_activity"].sum(),
-                        df_athlete["pct_Z3"].sum() * df_athlete["moving_time_activity"].sum(),
-                        df_athlete["pct_Z4"].sum() * df_athlete["moving_time_activity"].sum(),
-                    ]
-                })
+                            "zone": ["Z1", "Z2", "Z3", "Z4"],
+                            "percentage": [
+                                df_sorted["pct_time_Z1_last_60d"], 
+                                df_sorted["pct_time_Z2_last_60d"], 
+                                df_sorted["pct_time_Z3_last_60d"], 
+                                df_sorted["pct_time_Z4_last_60d"]
+                            ]
+                        })
+
+                chart = (
+                    alt.Chart(zones)
+                    .mark_arc()
+                    .encode(
+                        theta="percentage",
+                        color="zone",
+                        tooltip=["zone", "percentage"]
+                    )
+                )
+                st.altair_chart(chart, use_container_width=True)
 
             st.subheader("Your Latest Activities")
             df_athlete = df_athlete.sort_values(by="start_date", ascending=False).drop_duplicates(subset=["activity_id"])
