@@ -245,10 +245,10 @@ if 'access_token' in st.session_state:
                 zones = pd.DataFrame({
                             "zone": ["Z1", "Z2", "Z3", "Z4"],
                             "percentage": [
-                                df_sorted[0]["pct_time_Z1_last_60d"], 
-                                df_sorted[0]["pct_time_Z2_last_60d"], 
-                                df_sorted[0]["pct_time_Z3_last_60d"], 
-                                df_sorted[0]["pct_time_Z4_last_60d"]
+                                df_sorted.head(0)["pct_time_Z1_last_60d"], 
+                                df_sorted.head(0)["pct_time_Z2_last_60d"], 
+                                df_sorted.head(0)["pct_time_Z3_last_60d"], 
+                                df_sorted.head(0)["pct_time_Z4_last_60d"]
                             ]
                         })
 
