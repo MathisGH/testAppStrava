@@ -222,16 +222,16 @@ if 'access_token' in st.session_state:
         df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
 
         athlete_id = st.session_state['athlete_info']['id']
-        df_athlete = df_master[(df_master['athlete_id'] == athlete_id) & (df_master['sport_type'].isin(activity_type))]
+        df_athlete_full = df_master[(df_master['athlete_id'] == athlete_id) & (df_master['sport_type'].isin(activity_type))]
 
-        if df_athlete.empty:
+        if df_athlete_full.empty:
             st.warning("We couldn't find any processed activities for you yet.")
         else:
             left, right = st.columns(2)
             # Left column
             with left: # Left column
                 st.write("### Your current training status (ACWR)")
-                df_sorted = df_athlete.sort_values('start_date', ascending=False)
+                df_sorted = df_athlete_full.sort_values('start_date', ascending=False)
                 
                 latest_acwr = df_sorted['acwr'].iloc[0] if not df_sorted.empty else 0
                 previous_acwr = df_sorted['acwr'].iloc[1] if len(df_sorted) > 1 else latest_acwr
@@ -266,22 +266,15 @@ if 'access_token' in st.session_state:
                 st.altair_chart(chart, use_container_width=True)
 
             st.subheader("Your Latest Activities")
-            df_athlete = df_athlete.sort_values(by="start_date", ascending=False).drop_duplicates(subset=["activity_id"])
+            df_athlete_display = df_athlete_full.sort_values(by="start_date", ascending=False).drop_duplicates(subset=["activity_id"])
 
             columns_to_show = ["sport_type", "distance_activity", "moving_time_activity", "elevation_gain_activity", "average_speed_km_h_activity", "average_heartrate_activity", "training_load", "start_date"]
-            st.dataframe(df_athlete[columns_to_show].head(10))
+            st.dataframe(df_athlete_display[columns_to_show].head(10))
 
             st.subheader("Your cumulative training load over the last 4 weeks")
-            st.line_chart(df_athlete, x='start_date', y='cumulative_training_load_4_weeks')
+            st.line_chart(df_athlete_display, x='start_date', y='cumulative_training_load_4_weeks')
 
             # --- TESTS START --- 
-
-            st.metric("using1", "st.metric1")
-            st.metric("using2", "st.metric2")
-
-            col1, col2 = st.columns(2)
-            col1.metric("using1", "st.columns1")
-            col2.metric("using2", "st.columns2")
 
             master_file_path = "data/processed/activities_master_with_clusters.csv"
             df_sample = pd.read_csv(master_file_path, parse_dates=['start_date'])
@@ -327,8 +320,6 @@ if 'access_token' in st.session_state:
                             )
                         )
                         st.altair_chart(chart, use_container_width=True)
-
-
 
             # --- TESTS END ---
 
