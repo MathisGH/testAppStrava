@@ -281,10 +281,10 @@ if 'access_token' in st.session_state:
                         zones = pd.DataFrame({
                             "zone": ["Z1", "Z2", "Z3", "Z4"],
                             "minutes": [
-                                row["pct_Z1"], 
-                                row["pct_Z2"], 
-                                row["pct_Z3"], 
-                                row["pct_Z4"]
+                                row["pct_Z1"]*row["moving_time_activity"], 
+                                row["pct_Z2"]*row["moving_time_activity"], 
+                                row["pct_Z3"]*row["moving_time_activity"], 
+                                row["pct_Z4"]*row["moving_time_activity"]
                             ]
                         })
 
