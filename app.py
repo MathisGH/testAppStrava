@@ -257,17 +257,17 @@ if 'access_token' in st.session_state:
             df_sample = pd.read_csv(master_file_path, parse_dates=['start_date'])
             df_sample = df_master[df_master["athlete_id"]==athlete_id]
             
-            st.subheader("Your last 10 activities")
+            st.subheader("Your last 10 activities:")
 
             for _, row in df_sample.head(10).iterrows():
                 with st.expander(f"{row['sport_type']} — {row['start_date'].date()}"):
                     st.write(f"**Distance:** {row['distance_activity']/1000:.2f} km")
-                    st.write(f"**Duration:** {row['moving_time_activity']/60:.1f} min")
-                    st.write(f"**Elevation:** {row['elevation_gain_activity']} m")
-                    st.write(f"**Avg Pace:** {60 / row['average_speed_km_h_activity']:.1f} min/km")
-                    st.write(f"**Training Load:** {row['training_load']:.1f}")
-                    st.write(f"**Average Heartrate:** {row['average_heartrate_activity']:.1f}")
-                    st.write(f"**Activity type:** {row['cluster']:.1f}")
+                    # st.write(f"**Duration:** {row['moving_time_activity']/60:.1f} min")
+                    # st.write(f"**Elevation:** {row['elevation_gain_activity']} m")
+                    # st.write(f"**Avg Pace:** {60 / row['average_speed_km_h_activity']:.1f} min/km")
+                    # st.write(f"**Training Load:** {row['training_load']:.1f}")
+                    # st.write(f"**Average Heartrate:** {row['average_heartrate_activity']:.1f}")
+                    # st.write(f"**Activity type:** {row['cluster']:.1f}")
 
 
 
