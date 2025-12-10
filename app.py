@@ -249,11 +249,11 @@ if 'access_token' in st.session_state:
                 fig_gauge = create_acwr_gauge(latest_acwr, previous_acwr)
                 st.plotly_chart(fig_gauge, use_container_width=True)
 
-                # --- Interpretation text ---
+                # Interpretation text
                 interpretation = interpret_acwr(latest_acwr)
                 st.markdown(f"**Interpretation:** {interpretation}")
 
-                # --- Mini explanation of ACWR ---
+                # Mini explanation of ACWR
                 with st.expander("What is ACWR?"):
                     st.write("""
             **ACWR (Acute : Chronic Workload Ratio)** compares:
@@ -289,6 +289,14 @@ if 'access_token' in st.session_state:
                     )
                 )
                 st.altair_chart(chart, use_container_width=True)
+
+                # Interpretation text
+                st.markdown(f"**Interpretation:** ")
+
+                # Mini explanation of ACWR
+                with st.expander("ok"):
+                    st.write("""okok
+                    """)
 
             # --- LAST 10 ACTIVITIES START --- 
 
