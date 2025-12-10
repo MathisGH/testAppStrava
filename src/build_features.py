@@ -582,9 +582,8 @@ if __name__ == "__main__":
     # --- 7. WEATHER DATA ---
     logging.info("Step 6: Fetching weather data...")
     df_master_new['start_date'] = pd.to_datetime(df_master_new['start_date'])
-    weather_data = fetch_weather_parallel(df_master_new, max_workers=5)
-    df_master_new = pd.concat([df_master_new.reset_index(drop=True),
-                               weather_data.reset_index(drop=True)], axis=1)
+    # weather_data = fetch_weather_parallel(df_master_new, max_workers=5)
+    # df_master_new = pd.concat([df_master_new.reset_index(drop=True), weather_data.reset_index(drop=True)], axis=1)
 
     df_master_new = df_master_new.drop(columns=['start_latlng'])
 

@@ -140,7 +140,7 @@ def create_acwr_gauge(acwr_value, previous_value=None):
     fig = go.Figure(go.Indicator(
         mode="gauge+number+delta",
         value=acwr_value,
-        title={'text': "État de Forme Actuel (ACWR)", 'font': {'size': 20}},
+        title={'text': "Current training status", 'font': {'size': 20}},
         delta={'reference': previous_value, 'increasing': {'color': "OrangeRed"}, 'decreasing': {'color': "Green"}},
         gauge={
             'axis': {'range': [0, 2.3], 'tickwidth': 1, 'tickcolor': "darkblue"},
@@ -265,11 +265,11 @@ if 'access_token' in st.session_state:
                 )
                 st.altair_chart(chart, use_container_width=True)
 
-            # --- TESTS START --- 
+            # --- LAST 10 ACTIVITIES START --- 
 
             master_file_path = "data/processed/activities_master_with_clusters.csv"
-            df_sample = pd.read_csv(master_file_path, parse_dates=['start_date'])
-            df_sample = df_master[(df_master["athlete_id"]==athlete_id) & (df_master["sport_type"]==activity_type)].sort_values(by='start_date', ascending=False)
+            df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
+            df_sample = df_master[(df_master["athlete_id"]==athlete_id) & (df_master["sport_type"].isin(activity_type))].sort_values(by='start_date', ascending=False)
 
             st.subheader("Your last 10 activities:")
 
@@ -312,7 +312,7 @@ if 'access_token' in st.session_state:
                         )
                         st.altair_chart(chart, use_container_width=True)
 
-            # --- TESTS END ---
+            # --- LAST 10 ACTIVITIES END ---
 
             st.subheader("Your Latest Activities")
             df_athlete_display = df_athlete_full.sort_values(by="start_date", ascending=False).drop_duplicates(subset=["activity_id"])
