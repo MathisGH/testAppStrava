@@ -136,6 +136,16 @@ def handle_callback(code):
         return False
 
 # --- ACWR ---
+def interpret_acwr(acwr):
+    if acwr < 0.8:
+        return "🔵 Training load lower than usual -> Good for recovery, but long-term progression might slow down"
+    elif 0.8 <= acwr <= 1.3:
+        return "🟢 Optimal training load"
+    elif 1.3 < acwr <= 1.5:
+        return "🟠 Slightly high workload -> Pay attention to fatigue signs"
+    else:
+        return "🔴 High workload -> Risk of injury"
+
 def create_acwr_gauge(acwr_value, previous_value=None):
     fig = go.Figure(go.Indicator(
         mode="gauge+number+delta",
@@ -238,6 +248,21 @@ if 'access_token' in st.session_state:
 
                 fig_gauge = create_acwr_gauge(latest_acwr, previous_acwr)
                 st.plotly_chart(fig_gauge, use_container_width=True)
+
+                # --- Interpretation text ---
+                interpretation = interpret_acwr(latest_acwr)
+                st.markdown(f"**Interpretation:** {interpretation}")
+
+                # --- Mini explanation of ACWR ---
+                with st.expander("What is ACWR?"):
+                    st.write("""
+            **ACWR (Acute : Chronic Workload Ratio)** compares:
+            - **Acute load (7 days)** → the short-term training load  
+            - **Chronic load (28 days)** → what your body is used to  
+
+            It helps balance progression and injury risk.  
+            The target zone is **0.8 to 1.3**.
+                    """)
             
             # Right column
             with right:
