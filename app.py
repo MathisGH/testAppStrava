@@ -227,6 +227,9 @@ if 'access_token' in st.session_state:
     athlete_name = st.session_state['athlete_info']['firstname']
     st.write(f"Hello, {athlete_name}, here's a preview of your data:")
 
+    athletes_summary_path = "data/processed/athletes_summary.csv"
+    athletes_summary = pd.read_csv(athletes_summary_path)
+
     try:
         master_file_path = "data/processed/activities_master.csv"
         df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
@@ -290,13 +293,45 @@ if 'access_token' in st.session_state:
                 )
                 st.altair_chart(chart, use_container_width=True)
 
-                # Interpretation text
-                st.markdown(f"**Interpretation:** ")
+                # Heartrate zones explanation
+                with st.expander("More about your HR Zones"):
+                    athlete_id = latest["athlete_id"]
 
-                # Mini explanation of ACWR
-                with st.expander("ok"):
-                    st.write("""okok
-                    """)
+                    # Retrieve max HR from athletes_summary
+                    df_athlete = athletes_summary[athletes_summary["athlete_id"] == athlete_id]
+
+                    if df_athlete.empty:
+                        st.write("No athlete summary available.")
+                    else:
+                        max_hr = df_athlete.iloc[0]["max_hr"]
+
+                        if pd.isna(max_hr) or max_hr == 0:
+                            st.write("Max HR not available for this athlete.")
+                        else:
+                            zones_bpm = {
+                                "Z1": (0, int(max_hr * 0.78)),
+                                "Z2": (int(max_hr * 0.78), int(max_hr * 0.84)),
+                                "Z3": (int(max_hr * 0.84), int(max_hr * 0.92)),
+                                "Z4": (int(max_hr * 0.92), max_hr)
+                            }
+
+                            # Short descriptions
+                            zone_desc = {
+                                "Z1": "Easy / Recovery",
+                                "Z2": "Endurance Aerobic",
+                                "Z3": "Threshold / Tempo",
+                                "Z4": "High intensity"
+                            }
+
+                            st.write(f"**Max HR detected:** {max_hr} bpm")
+
+                            # Display table of zones
+                            st.write("### Your personalized HR zones")
+                            for zone, (low, high) in zones_bpm.items():
+                                st.write(
+                                    f"**{zone} ({low}–{high} bpm)** — {zone_desc[zone]}"
+                                )
+                    
 
             # --- LAST 10 ACTIVITIES START --- 
 
@@ -355,6 +390,49 @@ if 'access_token' in st.session_state:
 
             st.subheader("Your cumulative training load over the last 4 weeks")
             st.line_chart(df_athlete_display, x='start_date', y='cumulative_training_load_4_weeks')
+
+
+            # --- ATHLETES STATS START ---
+            st.write("## Athlete Summary")
+            athlete_id = latest["athlete_id"]
+            df_athlete = athletes_summary[athletes_summary["athlete_id"] == athlete_id]
+
+            if df_athlete.empty:
+                st.write("No athlete summary available.")
+            else:
+                row = df_athlete.iloc[0]
+
+                st.write("### General statistics")
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.metric("Total Runs", int(row["Nb_activities_run"]))
+                    st.metric("Total Rides", int(row["Nb_activities_ride"]))
+                    st.metric("Total Workouts", int(row["Nb_activities_workout"]))
+
+                with col2:
+                    st.metric("Distance Run", f"{int(row['Total_distance_run'])} km")
+                    st.metric("Distance Ride", f"{int(row['Total_distance_ride'])} km")
+                    st.metric("Max HR", int(row["max_hr"]))
+
+                st.write("---")
+                st.write("### Best Performances (PBs)")
+                
+                pb_cols = ["PB_5km", "PB_10km", "PB_21.1km", "PB_42.2km"]
+                for pb in pb_cols:
+                    if not pd.isna(row[pb]):
+                        st.write(f"**{pb.replace('PB_', '')}:** {row[pb]}")
+
+                st.write("---")
+                st.write("### VDOT Estimates")
+                
+                vdot_cols = ["VDOT_5km", "VDOT_10km", "VDOT_21.1km", "VDOT_42.2km", "VDOT_max"]
+                for v in vdot_cols:
+                    if not pd.isna(row[v]):
+                        st.write(f"**{v}:** {row[v]:.1f}")
+                # --- ATHLETES STATS END ---
+
 
     except FileNotFoundError:
         st.warning("Processed data file not found. Please connect your account first.")
