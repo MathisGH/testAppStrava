@@ -286,7 +286,7 @@ if 'access_token' in st.session_state:
                         st.write(f"**Avg Pace:** {60 / row['average_speed_km_h_activity']:.1f} min/km")
                         st.write(f"**Training Load:** {row['training_load']:.1f}")
                         st.write(f"**Average Heartrate:** {row['average_heartrate_activity']:.1f}")
-                        # st.write(f"**Activity type:** {row['cluster']:.1f}") to fix (rerun scripts in the server)
+                        st.write(f"**Activity type:** {row['cluster']:.1f}")
                     
                     # Right column
                     with right:
