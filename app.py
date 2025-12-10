@@ -265,20 +265,11 @@ if 'access_token' in st.session_state:
                 )
                 st.altair_chart(chart, use_container_width=True)
 
-            st.subheader("Your Latest Activities")
-            df_athlete_display = df_athlete_full.sort_values(by="start_date", ascending=False).drop_duplicates(subset=["activity_id"])
-
-            columns_to_show = ["sport_type", "distance_activity", "moving_time_activity", "elevation_gain_activity", "average_speed_km_h_activity", "average_heartrate_activity", "training_load", "start_date"]
-            st.dataframe(df_athlete_display[columns_to_show].head(10))
-
-            st.subheader("Your cumulative training load over the last 4 weeks")
-            st.line_chart(df_athlete_display, x='start_date', y='cumulative_training_load_4_weeks')
-
             # --- TESTS START --- 
 
             master_file_path = "data/processed/activities_master_with_clusters.csv"
             df_sample = pd.read_csv(master_file_path, parse_dates=['start_date'])
-            df_sample = df_master[(df_master["athlete_id"]==athlete_id) & (df_master["sport_type"]=="Run")].sort_values(by='start_date', ascending=False)
+            df_sample = df_master[(df_master["athlete_id"]==athlete_id) & (df_master["sport_type"]==activity_type)].sort_values(by='start_date', ascending=False)
 
             st.subheader("Your last 10 activities:")
 
@@ -322,6 +313,15 @@ if 'access_token' in st.session_state:
                         st.altair_chart(chart, use_container_width=True)
 
             # --- TESTS END ---
+
+            st.subheader("Your Latest Activities")
+            df_athlete_display = df_athlete_full.sort_values(by="start_date", ascending=False).drop_duplicates(subset=["activity_id"])
+
+            columns_to_show = ["sport_type", "distance_activity", "moving_time_activity", "elevation_gain_activity", "average_speed_km_h_activity", "average_heartrate_activity", "training_load", "start_date"]
+            st.dataframe(df_athlete_display[columns_to_show].head(10))
+
+            st.subheader("Your cumulative training load over the last 4 weeks")
+            st.line_chart(df_athlete_display, x='start_date', y='cumulative_training_load_4_weeks')
 
     except FileNotFoundError:
         st.warning("Processed data file not found. Please connect your account first.")
