@@ -423,16 +423,16 @@ def build_activity_master(df_clean, df_split_features, df_athletes_summary_new):
     df_master['acwr'] = round(df_master['acute_load'] / df_master['chronic_load'], 3)
 
     # --- 1) Relative distance per athlete ------------------------
-    df_master['distance_relative'] = (
+    df_master['distance_relative'] = round((
         df_master['distance_activity'] /
         df_master.groupby('athlete_id')['distance_activity'].transform('median')
-    )
+    ), 3)
 
     # --- 2) Relative training load per athlete -------------------
-    df_master['training_load_relative'] = (
+    df_master['training_load_relative'] = round((
         df_master['training_load'] /
         df_master.groupby('athlete_id')['training_load'].transform('median')
-    )
+    ), 3)
 
     # --- 3) Add VDOT_max from athletes_summary -------------------
     df_master = df_master.merge(
@@ -442,17 +442,17 @@ def build_activity_master(df_clean, df_split_features, df_athletes_summary_new):
     )
 
     # --- 4) Compute VDOT speed (expected speed from physiology) --
-    df_master['VDOT_speed'] = df_master['VDOT_max'].apply(vdot_to_speed) # change this later (or the function vdot_to_speed)
+    df_master['VDOT_speed'] = round(df_master['VDOT_max'].apply(vdot_to_speed), 3) # change this later (or the function vdot_to_speed)
 
     # If VDOT is missing → use global median running speed
     global_median_speed = df_master['average_speed_km_h_activity'].median()
     df_master['VDOT_speed'] = df_master['VDOT_speed'].fillna(global_median_speed)
 
     # --- 5) Speed relative to athlete potential ------------------
-    df_master['speed_relative'] = (
+    df_master['speed_relative'] = round((
         df_master['average_speed_km_h_activity'] /
         df_master['VDOT_speed']
-    )
+    ), 3)
 
     # --- 6) Clean duplicates by activity_id ----------------------
     df_master.drop_duplicates(subset=['activity_id'], inplace=True)
@@ -572,9 +572,9 @@ if __name__ == "__main__":
     def cumulative_load_last_weeks(df):
         df["start_date"] = pd.to_datetime(df["start_date"])
         df = df.sort_values(by=["athlete_id", "start_date"]).set_index("start_date")
-        df['cumulative_training_load_2_weeks'] = df.groupby('athlete_id')['training_load'].rolling('14D').sum().reset_index(level=0, drop=True)
-        df['cumulative_training_load_4_weeks'] = df.groupby('athlete_id')['training_load'].rolling('28D').sum().reset_index(level=0, drop=True)
-        df['cumulative_training_load_8_weeks'] = df.groupby('athlete_id')['training_load'].rolling('56D').sum().reset_index(level=0, drop=True)
+        df['cumulative_training_load_2_weeks'] = round(df.groupby('athlete_id')['training_load'].rolling('14D').sum().reset_index(level=0, drop=True), 3)
+        df['cumulative_training_load_4_weeks'] = round(df.groupby('athlete_id')['training_load'].rolling('28D').sum().reset_index(level=0, drop=True), 3)
+        df['cumulative_training_load_8_weeks'] = round(df.groupby('athlete_id')['training_load'].rolling('56D').sum().reset_index(level=0, drop=True), 3)
         return df.reset_index()
 
     df_master_new = cumulative_load_last_weeks(df_master_new)

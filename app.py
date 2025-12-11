@@ -382,11 +382,11 @@ if 'access_token' in st.session_state:
 
             # --- LAST 10 ACTIVITIES END ---
 
-            st.subheader("Your Latest Activities")
+            # st.subheader("Your Latest Activities")
             df_athlete_display = df_athlete_full.sort_values(by="start_date", ascending=False).drop_duplicates(subset=["activity_id"])
 
             columns_to_show = ["sport_type", "distance_activity", "moving_time_activity", "elevation_gain_activity", "average_speed_km_h_activity", "average_heartrate_activity", "training_load", "start_date"]
-            st.dataframe(df_athlete_display[columns_to_show].head(10))
+            # st.dataframe(df_athlete_display[columns_to_show].head(10))
 
             st.subheader("Your cumulative training load over the last 4 weeks")
             st.line_chart(df_athlete_display, x='start_date', y='cumulative_training_load_4_weeks')
@@ -425,12 +425,6 @@ if 'access_token' in st.session_state:
                         st.write(f"**{pb.replace('PB_', '')}:** {row[pb]}")
 
                 st.write("---")
-                st.write("### VDOT Estimates")
-                
-                vdot_cols = ["VDOT_5km", "VDOT_10km", "VDOT_21.1km", "VDOT_42.2km", "VDOT_max"]
-                for v in vdot_cols:
-                    if not pd.isna(row[v]):
-                        st.write(f"**{v}:** {row[v]:.1f}")
                 # --- ATHLETES STATS END ---
 
 
