@@ -69,6 +69,15 @@ def refresh_token(athlete, sheet): # Access token refresh
     }
     resp = requests.post(AUTH_URL, data=payload)
 
+    # Check Strava rate limits
+    limit_15min, limit_day = map(int, resp.headers.get("X-RateLimit-Limit", "0,0").split(","))
+    used_15min, used_day = map(int, resp.headers.get("X-RateLimit-Usage", "0,0").split(","))
+
+    # If getting close to limits:
+    if used_15min >= limit_15min - 20:
+        logging.warning("Rate limit near -> Sleeping 5 minutes...")
+        time.sleep(300)
+
     if resp.status_code != 200:
         logging.error(f"Error refreshing token: {resp.text}")
         return athlete
@@ -92,6 +101,7 @@ def refresh_token(athlete, sheet): # Access token refresh
         logging.error(f"Failed to update Google Sheet tokens: {e}")
 
     return athlete
+
 
 def fetch_activities(): # Main function to fetch activities for each athlete in the JSON file
     athletes, sheet = load_athletes()
@@ -121,6 +131,14 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
             params = {'per_page': 200, 'page': request_page_num}
             resp = requests.get(ACTIVITIES_URL, headers=headers, params=params)
 
+            # Check Strava rate limits
+            limit_15min, limit_day = map(int, resp.headers.get("X-RateLimit-Limit", "0,0").split(","))
+            used_15min, used_day = map(int, resp.headers.get("X-RateLimit-Usage", "0,0").split(","))
+
+            if used_15min >= limit_15min - 10:
+                logging.warning("Rate limit near -> Sleeping 5 minutes...")
+                time.sleep(300)
+
             if resp.status_code != 200:
                 logging.error(f"Error fetching activities (page {request_page_num}): {resp.text}")
                 break
@@ -130,7 +148,6 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
             if not response:
                 break
 
-
             new_data = [activity for activity in response if str(activity['id']) not in existing_ids]
             if not new_data:
                 break
@@ -139,20 +156,28 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
             request_page_num += 1
             logging.info(f"Page {request_page_num} fetched: ({len(new_data)} new activities)")
 
-            # Stop the loop if we reach the quota and wait 15 minutes
-            if request_page_num % 290 == 0:
-                logging.warning("API limit reached, sleeping 15 minutes...")
-                time.sleep(900)
-
         # Fetch details of new activities
         detailed_activities = []
         for activity in new_activities:
             activity_id = activity['id']
-            details = requests.get(f"{ACTIVITY_DETAILS_URL}{activity_id}", headers=headers).json()
+
+            # New way to fetch + read limits
+            details_resp = requests.get(f"{ACTIVITY_DETAILS_URL}{activity_id}", headers=headers)
+
+            # Check Strava rate limits
+            limit_15min, limit_day = map(int, details_resp.headers.get("X-RateLimit-Limit", "0,0").split(","))
+            used_15min, used_day = map(int, details_resp.headers.get("X-RateLimit-Usage", "0,0").split(","))
+
+            if used_15min >= limit_15min - 10:
+                logging.warning("Rate limit near! Sleeping 5 minutes...")
+                time.sleep(300)
+
+            details = details_resp.json()
+
             activity.update(details)
             detailed_activities.append(activity)
             logging.info(f"Details fetched for activity {activity_id}")
-            time.sleep(0.5)  # Pause to respect the quotas
+            time.sleep(1)  # Pause to respect the quotas
 
         # CSV update
         if detailed_activities:
