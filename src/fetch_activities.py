@@ -57,7 +57,7 @@ def load_athletes(): # Load athletes DIRECTLY FROM GOOGLE SHEETS
         
     except Exception as e:
         print(f"Error loading athletes from Google Sheets: {e}")
-        return {}
+        return {}, None
 
 
 def refresh_token(athlete, sheet): # Access token refresh

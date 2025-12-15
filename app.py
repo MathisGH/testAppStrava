@@ -412,8 +412,8 @@ if 'access_token' in st.session_state:
                     st.metric("Total Workouts", int(row["Nb_activities_workout"]))
 
                 with col2:
-                    st.metric("Distance Run", f"{int(row['Total_distance_run'])} km")
-                    st.metric("Distance Ride", f"{int(row['Total_distance_ride'])} km")
+                    st.metric("Distance Run", f"{int(row['Total_distance_run'])/1000} km")
+                    st.metric("Distance Ride", f"{int(row['Total_distance_ride'])/1000} km")
                     st.metric("Max HR", int(row["max_hr"]))
 
                 st.write("---")
