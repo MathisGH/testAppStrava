@@ -69,14 +69,9 @@ def refresh_token(athlete, sheet): # Access token refresh
     }
     resp = requests.post(AUTH_URL, data=payload)
 
-    # Check Strava rate limits
-    limit_15min, limit_day = map(int, resp.headers.get("X-RateLimit-Limit", "0,0").split(","))
-    used_15min, used_day = map(int, resp.headers.get("X-RateLimit-Usage", "0,0").split(","))
-
-    # If getting close to limits:
-    if used_15min >= limit_15min - 20:
-        logging.warning("Rate limit near -> Sleeping 5 minutes...")
-        time.sleep(300)
+    if resp.status_code != 200:
+        logging.error(f"Error refreshing token: {resp.text}")
+        return athlete
 
     if resp.status_code != 200:
         logging.error(f"Error refreshing token: {resp.text}")
@@ -131,13 +126,11 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
             params = {'per_page': 200, 'page': request_page_num}
             resp = requests.get(ACTIVITIES_URL, headers=headers, params=params)
 
-            # Check Strava rate limits
-            limit_15min, limit_day = map(int, resp.headers.get("X-RateLimit-Limit", "0,0").split(","))
-            used_15min, used_day = map(int, resp.headers.get("X-RateLimit-Usage", "0,0").split(","))
+            if resp.status_code == 429:
+                logging.warning("Rate limit hit (429). Sleeping 15 minutes...")
+                time.sleep(900)
+                continue
 
-            if used_15min >= limit_15min - 10:
-                logging.warning("Rate limit near -> Sleeping 5 minutes...")
-                time.sleep(300)
 
             if resp.status_code != 200:
                 logging.error(f"Error fetching activities (page {request_page_num}): {resp.text}")
@@ -164,13 +157,10 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
             # New way to fetch + read limits
             details_resp = requests.get(f"{ACTIVITY_DETAILS_URL}{activity_id}", headers=headers)
 
-            # Check Strava rate limits
-            limit_15min, limit_day = map(int, details_resp.headers.get("X-RateLimit-Limit", "0,0").split(","))
-            used_15min, used_day = map(int, details_resp.headers.get("X-RateLimit-Usage", "0,0").split(","))
-
-            if used_15min >= limit_15min - 10:
-                logging.warning("Rate limit near! Sleeping 5 minutes...")
-                time.sleep(300)
+            if details_resp.status_code == 429:
+                logging.warning("Rate limit hit (429). Sleeping 15 minutes...")
+                time.sleep(900)
+                continue
 
             details = details_resp.json()
 
