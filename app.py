@@ -336,11 +336,12 @@ if 'access_token' in st.session_state:
 
             # Clusters
             CLUSTER_COLORS = {
-                0: "#2ecc71",  # Endurance / Easy -> Green
-                1: "#f1c40f",  # Threshold -> Yellow
-                2: "#e74c3c",  # High intensity -> Red
-                3: "#3498db",  # Long run -> Blue
+                0: "green",   # Endurance
+                1: "yellow",  # Threshold
+                2: "red",     # Intensity
+                3: "blue",    # Long run
             }
+
 
             CLUSTER_LABELS = {
                 0: "Endurance",
@@ -359,12 +360,17 @@ if 'access_token' in st.session_state:
                 cluster = int(row["cluster"])
                 label = CLUSTER_LABELS.get(cluster, "Unknown")
 
-                st.write(
-                    f"**{row['sport_type']} — {row['start_date'].date()}**  "
-                    f"| {row['distance_activity']/1000:.1f} km  "
-                    f"| {row['moving_time_activity']/60:.0f} min  "
-                    f"| **{label}**"
-                )
+                col1, col2 = st.columns([4, 1])
+
+                with col1:
+                    st.write(
+                        f"**{row['sport_type']} — {row['start_date'].date()}**  "
+                        f"| {row['distance_activity']/1000:.1f} km  "
+                        f"| {row['moving_time_activity']/60:.0f} min"
+                    )
+
+                with col2:
+                    st.badge(label, color=CLUSTER_COLORS.get(cluster, "gray"))
 
                 with st.expander("Show details"):
 
