@@ -219,7 +219,6 @@ if auth_code and 'access_token' not in st.session_state:
             st.code(e.stderr)
 
         st.query_params.clear()
-        st.button("Display my dashboard")
 
 # --- MAIN DASHBOARD ---
 if 'access_token' in st.session_state:
@@ -335,6 +334,21 @@ if 'access_token' in st.session_state:
 
             # --- LAST 10 ACTIVITIES START --- 
 
+            # Clusters
+            CLUSTER_COLORS = {
+                0: "#2ecc71",  # Endurance / Easy -> Green
+                1: "#f1c40f",  # Threshold -> Yellow
+                2: "#e74c3c",  # High intensity -> Red
+                3: "#3498db",  # Long run -> Blue
+            }
+
+            CLUSTER_LABELS = {
+                0: "Endurance",
+                1: "Threshold",
+                2: "Intensity",
+                3: "Long run",
+            }
+
             master_file_path = "data/processed/activities_master_with_clusters.csv"
             df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
             df_sample = df_master[(df_master["athlete_id"]==athlete_id) & (df_master["sport_type"].isin(activity_type))].sort_values(by='start_date', ascending=False)
@@ -342,7 +356,17 @@ if 'access_token' in st.session_state:
             st.subheader("Your last 10 activities:")
 
             for _, row in df_sample.head(10).iterrows():
-                with st.expander(f"{row['sport_type']} — {row['start_date'].date()}"):
+                cluster = int(row["cluster"])
+                label = CLUSTER_LABELS.get(cluster, "Unknown")
+
+                st.write(
+                    f"**{row['sport_type']} — {row['start_date'].date()}**  "
+                    f"| {row['distance_activity']/1000:.1f} km  "
+                    f"| {row['moving_time_activity']/60:.0f} min  "
+                    f"| **{label}**"
+                )
+
+                with st.expander("Show details"):
 
                     left, right = st.columns(2)
 
