@@ -172,7 +172,10 @@ def fetch_activities(): # Main function to fetch activities for each athlete in 
         # CSV update
         if detailed_activities:
             df_new = pd.DataFrame(detailed_activities)
-            df_final = pd.concat([df_existing, df_new], ignore_index=True)
+            if df_existing.empty: # In order to avoid the warning about concatenating to empty dataframe
+                df_final = df_new.copy()
+            else:
+                df_final = pd.concat([df_existing, df_new], ignore_index=True)
             df_final["athlete_id"] = int(athlete_id)
             df_final.to_csv(file_path, index=False)
             logging.info(f"{len(detailed_activities)} new activities saved for {athlete['firstname']}")
