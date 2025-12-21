@@ -481,14 +481,14 @@ if __name__ == "__main__":
 
     if existing_master_path.exists():
         df_master_existing = pd.read_csv(existing_master_path, parse_dates=["start_date"])
-        processed_ids = set(df_master_existing["activity_id"].unique())
+        processed_ids = set(df_master_existing["activity_id"].astype(str).unique())
         logging.info(f"Found {len(processed_ids)} activities already processed")
     else:
         df_master_existing = pd.DataFrame()
         processed_ids = set()
 
     # --- 3. FILTER NEW ACTIVITIES ---
-    df_new = df_raw[~df_raw["id"].isin(processed_ids)].copy()
+    df_new = df_raw[~df_raw["id"].astype(str).isin(processed_ids)].copy()
     logging.info(f"Found {len(df_new)} new activities to process")
 
     if df_new.empty:
@@ -590,7 +590,14 @@ if __name__ == "__main__":
     # --- 8. SAVE OUTPUT FILES ---
     logging.info("Step 7: Saving results...")
 
-    df_master_new.to_csv(OUTPUT_PATH / "activities_master.csv", index=False)
+    if not df_master_existing.empty:
+        df_master_final = pd.concat(
+            [df_master_existing, df_master_new],
+            ignore_index=True
+        )
+    else:
+        df_master_final = df_master_new.copy()
+    df_master_final.to_csv(OUTPUT_PATH / "activities_master.csv", index=False)
     df_best_efforts.to_csv(OUTPUT_PATH / "best_efforts.csv", index=False)
     df_activity_splits.to_csv(OUTPUT_PATH / "activity_splits.csv", index=False)
     df_athletes_summary_new.to_csv(OUTPUT_PATH / "athletes_summary.csv", index=False)
