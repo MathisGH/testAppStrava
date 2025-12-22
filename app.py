@@ -366,7 +366,7 @@ if 'access_token' in st.session_state:
                     st.write(
                         f"**{row['sport_type']} — {row['start_date'].date()}**  "
                         f"| {row['distance_activity']/1000:.1f} km  "
-                        f"| {row['moving_time_activity']/60:.0f} min"
+                        f"| {row['moving_time_activity']/60:.1f} hours"
                     )
 
                 with col2:
@@ -378,7 +378,7 @@ if 'access_token' in st.session_state:
 
                     # Left column
                     with left: # Left column
-                        st.write(f"**Distance:** {row['distance_activity']/1000:.2f} km")
+                        st.write(f"**Distance:** {row['distance_activity']/1000:.1f} km")
                         st.write(f"**Duration:** {row['moving_time_activity']/60:.1f} hours")
                         st.write(f"**Elevation:** {row['elevation_gain_activity']} m")
                         st.write(f"**Avg Pace:** {60 / row['average_speed_km_h_activity']:.1f} min/km")
