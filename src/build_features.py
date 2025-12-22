@@ -597,6 +597,7 @@ if __name__ == "__main__":
         )
     else:
         df_master_final = df_master_new.copy()
+    df_master_final = df_master_final.drop_duplicates(subset=['activity_id'])
     df_master_final.to_csv(OUTPUT_PATH / "activities_master.csv", index=False)
     df_best_efforts.to_csv(OUTPUT_PATH / "best_efforts.csv", index=False)
     df_activity_splits.to_csv(OUTPUT_PATH / "activity_splits.csv", index=False)

@@ -9,10 +9,7 @@ import joblib
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
-# ------------------------------------------------------
 # FEATURE SELECTION
-# ------------------------------------------------------
 FEATURE_COLUMNS = [
     "cv_speed",
     "pct_Z1", "pct_Z2", "pct_Z3", "pct_Z4",
@@ -21,10 +18,7 @@ FEATURE_COLUMNS = [
     "training_load_relative"
 ]
 
-
-# ------------------------------------------------------
 # LOAD OR TRAIN MODEL
-# ------------------------------------------------------
 def load_or_train_kmeans(X_scaled, n_clusters=5, model_path="models"):
 
     model_path = Path(model_path)
@@ -55,18 +49,14 @@ def load_or_train_kmeans(X_scaled, n_clusters=5, model_path="models"):
     return scaler, kmeans
 
 
-# ------------------------------------------------------
 # PREPARE X FOR CLUSTERING
-# ------------------------------------------------------
 def prepare_X(df):
     X = df[FEATURE_COLUMNS].replace([np.inf, -np.inf], np.nan)
     X_filled = X.fillna(0)
     return df.reset_index(drop=True), X_filled
 
 
-# ------------------------------------------------------
 # MAIN CLUSTERING PIPELINE
-# ------------------------------------------------------
 def run_clustering(input_path="data/processed/activities_master.csv",
                    output_path="data/processed/activities_master_with_clusters.csv",
                    model_path="models",
@@ -104,9 +94,6 @@ def run_clustering(input_path="data/processed/activities_master.csv",
     return df_full
 
 
-# ------------------------------------------------------
-# SCRIPT ENTRY POINT
-# ------------------------------------------------------
 if __name__ == "__main__":
     BASE_DIR = Path(__file__).resolve().parents[2]
     print(BASE_DIR)
