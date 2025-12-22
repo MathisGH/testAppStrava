@@ -53,7 +53,7 @@ def load_or_train_kmeans(X_scaled, n_clusters=5, model_path="models"):
 def prepare_X(df):
     X = df[FEATURE_COLUMNS].replace([np.inf, -np.inf], np.nan)
     X_filled = X.fillna(0)
-    return df.reset_index(drop=True), X_filled
+    return df, X_filled
 
 
 # MAIN CLUSTERING PIPELINE
@@ -84,7 +84,17 @@ def run_clustering(input_path="data/processed/activities_master.csv",
     # Merge back into the full df (activities that are not RUN get -1)
     df_full = df.copy()
     df_full["cluster"] = -1
-    df_full.loc[df_run_clean.index, "cluster"] = df_run_clean["cluster"]
+
+    df_full = df_full.merge(
+        df_run_clean[["activity_id", "cluster"]],
+        on="activity_id",
+        how="left",
+        suffixes=("", "_run")
+    )
+
+    df_full["cluster"] = df_full["cluster_run"].fillna(-1).astype(int)
+    df_full.drop(columns=["cluster_run"], inplace=True)
+    df_full = df_full.drop_duplicates(subset=['activity_id'])
 
     # Save output
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
