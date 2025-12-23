@@ -115,6 +115,9 @@ def run_clustering(input_path="data/processed/activities_master.csv",
 
     # Save output
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    print("WRITING FILE TO:", Path(output_path).resolve())
+    print("Unique clusters:", np.unique(df_full["cluster"]))
+
     df_full.to_csv(output_path, index=False)
 
     logging.info(f"Saved final clustered master → {output_path}")
