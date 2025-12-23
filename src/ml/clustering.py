@@ -14,8 +14,7 @@ FEATURE_COLUMNS = [
     "cv_speed",
     "pct_Z1", "pct_Z2", "pct_Z3", "pct_Z4",
     "speed_relative",
-    "distance_relative",
-    "training_load_relative"
+    "distance_relative"
 ]
 
 # LOAD OR TRAIN MODEL
@@ -53,14 +52,27 @@ def load_or_train_kmeans(X_scaled, n_clusters=5, model_path="models"):
 def prepare_X(df):
     X = df[FEATURE_COLUMNS].replace([np.inf, -np.inf], np.nan)
     X_filled = X.fillna(0)
-    return df, X_filled
+    
+    # Condition: at least one HR zone > 0
+    valid_mask = (
+        df["pct_Z1"] +
+        df["pct_Z2"] +
+        df["pct_Z3"] +
+        df["pct_Z4"]
+    ) > 0
+
+    # Keep only valid activities
+    df_valid = df.loc[valid_mask].copy()
+    X_valid = X.loc[valid_mask].fillna(0)
+
+    return df_valid, X_valid, valid_mask
 
 
 # MAIN CLUSTERING PIPELINE
 def run_clustering(input_path="data/processed/activities_master.csv",
                    output_path="data/processed/activities_master_with_clusters.csv",
                    model_path="models",
-                   n_clusters=5):
+                   n_clusters=4):
 
     logging.info("Loading activities_master...")
     df = pd.read_csv(input_path)
@@ -69,7 +81,7 @@ def run_clustering(input_path="data/processed/activities_master.csv",
     df_run = df[df["sport_type"] == "Run"].copy()
 
     # Prepare features
-    df_run_clean, X_clean = prepare_X(df_run)
+    df_run_clean, X_clean, valid_mask = prepare_X(df_run)
 
     # Load or train the model
     scaler, kmeans = load_or_train_kmeans(X_clean, n_clusters=n_clusters, model_path=model_path)
@@ -81,19 +93,24 @@ def run_clustering(input_path="data/processed/activities_master.csv",
     # Attach clusters to df_run_clean
     df_run_clean["cluster"] = labels
 
-    # Merge back into the full df (activities that are not RUN get -1)
-    df_full = df.copy()
-    df_full["cluster"] = -1
-
-    df_full = df_full.merge(
-        df_run_clean[["activity_id", "cluster"]],
-        on="activity_id",
-        how="left",
-        suffixes=("", "_run")
+    df_run = df_run.merge(
+    df_run_clean[["activity_id", "cluster"]],
+    on="activity_id",
+    how="left"
     )
 
-    df_full["cluster"] = df_full["cluster_run"].fillna(-1).astype(int)
-    df_full.drop(columns=["cluster_run"], inplace=True)
+    df_run["cluster"] = df_run["cluster"].fillna(-1).astype(int)
+
+    # Merge back into the full df (activities that are not RUN get -1)
+    df_full = df.copy()
+
+    df_full = df_full.merge(
+        df_run[["activity_id", "cluster"]],
+        on="activity_id",
+        how="left"
+    )
+
+    df_full["cluster"] = df_full["cluster"].fillna(-1).astype(int)
     df_full = df_full.drop_duplicates(subset=['activity_id'])
 
     # Save output

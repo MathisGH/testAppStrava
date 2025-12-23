@@ -428,12 +428,6 @@ def build_activity_master(df_clean, df_split_features, df_athletes_summary_new):
         df_master.groupby('athlete_id')['distance_activity'].transform('median')
     ), 3)
 
-    # --- 2) Relative training load per athlete -------------------
-    df_master['training_load_relative'] = round((
-        df_master['training_load'] /
-        df_master.groupby('athlete_id')['training_load'].transform('median')
-    ), 3)
-
     # --- 3) Add VDOT_max from athletes_summary -------------------
     df_master = df_master.merge(
         df_athletes_summary_new[['athlete_id', 'VDOT_max']],
