@@ -18,7 +18,7 @@ FEATURE_COLUMNS = [
 ]
 
 # LOAD OR TRAIN MODEL
-def load_or_train_kmeans(X_scaled, n_clusters=5, model_path="models"):
+def load_or_train_kmeans(X_scaled, n_clusters=4, model_path="models"):
 
     model_path = Path(model_path)
     kmeans_file = model_path / "kmeans.pkl"
@@ -131,6 +131,6 @@ if __name__ == "__main__":
     OUTPUT = BASE_DIR / "data" / "processed" / "activities_master_with_clusters.csv"
     MODELS = BASE_DIR / "models"
 
-    run_clustering(input_path=INPUT, output_path=OUTPUT, model_path=MODELS, n_clusters=5)
+    run_clustering(input_path=INPUT, output_path=OUTPUT, model_path=MODELS, n_clusters=4)
 
     logging.info("Clustering completed successfully.")
