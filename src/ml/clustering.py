@@ -131,6 +131,6 @@ if __name__ == "__main__":
     OUTPUT = BASE_DIR / "data" / "processed" / "activities_master_with_clusters.csv"
     MODELS = BASE_DIR / "models"
 
-    run_clustering(input_path=INPUT, output_path=OUTPUT, model_path=MODELS, n_clusters=4)
+    run_clustering(input_path=INPUT, output_path=OUTPUT, model_path=MODELS, n_clusters=3)
 
     logging.info("Clustering completed successfully.")

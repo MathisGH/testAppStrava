@@ -336,20 +336,19 @@ if 'access_token' in st.session_state:
 
             # Clusters
             CLUSTER_COLORS = {
-                0: "green",   # Endurance
-                1: "yellow",  # Threshold
-                2: "red",     # Intensity
-                3: "blue",    # Long run
+                0: "red",   # High intensity
+                1: "green",  # Easy run
+                2: "orange"     # Threshold/Tempo
             }
 
             CLUSTER_LABELS = {
-                0: "Endurance",
-                1: "Threshold",
-                2: "Intensity",
-                3: "Long run",
+                0: "High intensity",
+                1: "Easy run",
+                2: "Threshold/Tempo"
             }
 
-            master_file_path = "data/processed/activities_master_with_clusters.csv"
+            # master_file_path = "data/processed/activities_master_with_clusters.csv"
+            master_file_path = "data/processed/activities_master_with_gmm.csv"
             df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
             df_sample = df_master[(df_master["athlete_id"]==athlete_id) & (df_master["sport_type"].isin(activity_type))].sort_values(by='start_date', ascending=False)
 
