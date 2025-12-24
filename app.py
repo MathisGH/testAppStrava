@@ -342,7 +342,6 @@ if 'access_token' in st.session_state:
                 3: "blue",    # Long run
             }
 
-
             CLUSTER_LABELS = {
                 0: "Endurance",
                 1: "Threshold",
