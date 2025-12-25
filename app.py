@@ -331,7 +331,7 @@ if 'access_token' in st.session_state:
 
             # In order to always have the same cluster numbering based on speed
             cluster_summary = (df_master.groupby("cluster")["speed_relative"].mean().round(3)).sort_values(ascending=False).index.tolist()
-            cluster_summary = cluster_summary.drop(-1) if -1 in cluster_summary else cluster_summary
+            cluster_summary = cluster_summary.remove(-1)  # Remove cluster -1 (Other)
 
             cluster_max = cluster_summary[0]      # High intensity
             cluster_mid = cluster_summary[1]      # Threshold
