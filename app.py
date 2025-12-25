@@ -324,32 +324,35 @@ if 'access_token' in st.session_state:
 
             # --- LAST 10 ACTIVITIES START --- 
 
-            
-
             # master_file_path = "data/processed/activities_master_with_clusters.csv"
             master_file_path = "data/processed/activities_master_with_gmm.csv"
             df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
             df_sample = df_master[(df_master["athlete_id"]==athlete_id) & (df_master["sport_type"].isin(activity_type))].sort_values(by='start_date', ascending=False)
 
-            # Clusters colors and labels
-            df_runs_for_labels = df_master[df_master['sport_type'] == 'Run']
+            # In order to always have the same cluster numbering based on speed
+            cluster_summary = (df_master.groupby("cluster")["speed_relative"].mean().round(3)).sort_values(ascending=False).index.tolist()
+
+            cluster_max = cluster_summary[0]      # High intensity
+            cluster_mid = cluster_summary[1]      # Threshold
+            cluster_min = cluster_summary[-1]     # Easy run
             
-            if not df_runs_for_labels.empty:
-                sorted_clusters = df_runs_for_labels.groupby('cluster')['average_speed_km_h_activity'].mean().sort_values().index.tolist()
-            else:
-                sorted_clusters = [0, 1, 2]
 
-            CLUSTER_LABELS = {}
-            CLUSTER_LABELS[-1] = "Other"
+            # Clusters
+            CLUSTER_COLORS = {
+                cluster_max: "red",   # High intensity
+                cluster_mid: "orange",  # Threshold/Tempo
+                cluster_min: "green",  # Easy run
+                -1: "gray"  # Other
+            }
 
-            CLUSTER_COLORS = {-1: "gray"}
-            CLUSTER_COLORS[sorted_clusters[0]] = "green"
-            CLUSTER_COLORS[sorted_clusters[1]] = "orange"
-            CLUSTER_COLORS[sorted_clusters[2]] = "red"
-            CLUSTER_LABELS[sorted_clusters[0]] = "Easy"
-            CLUSTER_LABELS[sorted_clusters[1]] = "Threshold"
-            CLUSTER_LABELS[sorted_clusters[2]] = "Speed/Long Runs"
+            CLUSTER_LABELS = {
+                cluster_max: "High intensity",
+                cluster_mid: "Threshold/Tempo",
+                cluster_min: "Easy run",
+                -1: "Other"
+            }
 
+            
             st.subheader("Your last 10 activities:")
 
             for _, row in df_sample.head(10).iterrows():
