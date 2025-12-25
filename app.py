@@ -324,25 +324,31 @@ if 'access_token' in st.session_state:
 
             # --- LAST 10 ACTIVITIES START --- 
 
-            # Clusters
-            CLUSTER_COLORS = {
-                0: "red",   # High intensity
-                1: "green",  # Easy run
-                2: "orange",     # Threshold/Tempo
-                -1: "gray"  # Other
-            }
-
-            CLUSTER_LABELS = {
-                0: "High intensity",
-                1: "Easy run",
-                2: "Threshold/Tempo",
-                -1: "Other"
-            }
+            
 
             # master_file_path = "data/processed/activities_master_with_clusters.csv"
             master_file_path = "data/processed/activities_master_with_gmm.csv"
             df_master = pd.read_csv(master_file_path, parse_dates=['start_date'])
             df_sample = df_master[(df_master["athlete_id"]==athlete_id) & (df_master["sport_type"].isin(activity_type))].sort_values(by='start_date', ascending=False)
+
+            # Clusters colors and labels
+            df_runs_for_labels = df_master[df_master['sport_type'] == 'Run']
+            
+            if not df_runs_for_labels.empty:
+                sorted_clusters = df_runs_for_labels.groupby('cluster')['average_speed_km_h_activity'].mean().sort_values().index.tolist()
+            else:
+                sorted_clusters = [0, 1, 2]
+
+            CLUSTER_LABELS = {}
+            CLUSTER_LABELS[-1] = "Other"
+
+            CLUSTER_COLORS = {-1: "gray"}
+            CLUSTER_COLORS[sorted_clusters[0]] = "green"
+            CLUSTER_COLORS[sorted_clusters[1]] = "orange"
+            CLUSTER_COLORS[sorted_clusters[2]] = "red"
+            CLUSTER_LABELS[sorted_clusters[0]] = "Easy"
+            CLUSTER_LABELS[sorted_clusters[1]] = "Threshold"
+            CLUSTER_LABELS[sorted_clusters[2]] = "Speed/Long Runs"
 
             st.subheader("Your last 10 activities:")
 
