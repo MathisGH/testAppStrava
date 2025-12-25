@@ -338,13 +338,15 @@ if 'access_token' in st.session_state:
             CLUSTER_COLORS = {
                 0: "red",   # High intensity
                 1: "green",  # Easy run
-                2: "orange"     # Threshold/Tempo
+                2: "orange",     # Threshold/Tempo
+                -1: "gray"  # Other
             }
 
             CLUSTER_LABELS = {
                 0: "High intensity",
                 1: "Easy run",
-                2: "Threshold/Tempo"
+                2: "Threshold/Tempo",
+                -1: "Other"
             }
 
             # master_file_path = "data/processed/activities_master_with_clusters.csv"
