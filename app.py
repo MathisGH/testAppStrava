@@ -370,7 +370,7 @@ if 'access_token' in st.session_state:
                     )
 
                 with col2:
-                    st.badge(label, color=CLUSTER_COLORS.get(cluster, "gray"))
+                    st.badge(label, color=CLUSTER_COLORS.get(cluster, "black"))
 
                 with st.expander("Show details"):
 
