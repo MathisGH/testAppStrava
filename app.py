@@ -47,17 +47,7 @@ def load_models():
     kmeans = joblib.load("models/kmeans.pkl")
     return scaler, kmeans
 
-@st.cache_data
-def load_cluster_labels():
-    try:
-        with open("models/cluster_labels.json", "r") as f:
-            labels = json.load(f)
-    except:
-        labels = {}
-    return labels
-
 scaler, kmeans = load_models()
-cluster_labels = load_cluster_labels()
 
 # --- STRAVA AUTHENTICATION LOGIC ---
 
@@ -343,7 +333,7 @@ if 'access_token' in st.session_state:
             }
 
             CLUSTER_LABELS = {
-                0: "High itensity",
+                0: "High intensity",
                 1: "Easy run",
                 2: "Threshold/Tempo",
                 -1: "Other"
