@@ -343,7 +343,7 @@ if 'access_token' in st.session_state:
             }
 
             CLUSTER_LABELS = {
-                0: "High intensity",
+                0: "High itensity",
                 1: "Easy run",
                 2: "Threshold/Tempo",
                 -1: "Other"
@@ -370,7 +370,7 @@ if 'access_token' in st.session_state:
                     )
 
                 with col2:
-                    st.badge(label, color=CLUSTER_COLORS.get(cluster, "black"))
+                    st.badge(label, color=CLUSTER_COLORS.get(cluster, "gray"))
 
                 with st.expander("Show details"):
 
