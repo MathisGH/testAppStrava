@@ -167,8 +167,8 @@ def process_best_efforts(df_clean: pd.DataFrame, df_splits_metric: pd.DataFrame)
         # For each (best_effort_name), keep the row with the best pr_rank (=1 is better)
         df_best_efforts = (
             df_best_efforts
-            .sort_values(by=['best_effort_name', 'pr_rank'])
-            .groupby('best_effort_name', as_index=False)
+            .sort_values(by=['athlete_id','best_effort_name', 'pr_rank'])
+            .groupby(['athlete_id', 'best_effort_name'], as_index=False)
             .first()
         )
 
@@ -492,11 +492,19 @@ if __name__ == "__main__":
     # --- 4. CLEANING & BASIC DATA EXTRACTION ---
     logging.info("Step 3: Cleaning activities and processing best efforts...")
     df_clean, df_splits_metric = clean_activities(df_new.copy())
-    df_best_efforts, df_activity_splits = process_best_efforts(df_clean.copy(), df_splits_metric.copy())
+    _, df_activity_splits = process_best_efforts(
+        df_clean.copy(),
+        df_splits_metric.copy()
+    )
+    df_clean_all, df_splits_all = clean_activities(df_raw.copy())
+    df_best_efforts, _ = process_best_efforts(
+        df_clean_all.copy(),
+        df_splits_all.copy()
+    )
 
     # --- 5. GENERATE ATHLETE SUMMARY TABLE ---
     logging.info("Step 4: Generating athlete summary statistics...")
-    df_athletes_summary_new = generate_athlete_stats(df_clean, df_best_efforts, MANUAL_STATS_PATH)
+    df_athletes_summary_new = generate_athlete_stats(df_clean_all, df_best_efforts, MANUAL_STATS_PATH)
 
     # --- 6. CREATE THE 'ACTIVITIES_MASTER' TABLE ---
     logging.info("Step 5: Creating the 'activities_master' table...")
