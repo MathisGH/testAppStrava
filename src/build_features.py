@@ -478,12 +478,6 @@ if __name__ == "__main__":
     logging.info("Step 1: Loading raw data...")
     df_raw = load_data(DATA_PATH)
 
-    logging.info(f"RAW shape: {df_raw.shape}")
-    logging.info(f"RAW athletes: {df_raw['athlete_id'].nunique()}")
-    logging.info(f"RAW activities: {df_raw['id'].nunique()}")
-    logging.info(f"RAW date range: {df_raw['start_date'].min()} → {df_raw['start_date'].max()}")
-
-
     # --- 2. LOAD EXISTING PROCESSED DATA ---
     logging.info("Step 2: Checking for existing processed data...")
     existing_master_path = OUTPUT_PATH / "activities_master.csv"
@@ -606,6 +600,13 @@ if __name__ == "__main__":
 
     # --- 8. SAVE OUTPUT FILES ---
     logging.info("Step 7: Saving results...")
+    logging.info(
+        df_best_efforts
+        .groupby(['athlete_id', 'best_effort_name'])
+        .size()
+    )
+    logging.info(df_best_efforts['best_effort_name'].value_counts())
+
 
     if not df_master_existing.empty:
         df_master_final = pd.concat(
@@ -616,6 +617,10 @@ if __name__ == "__main__":
         df_master_final = df_master_new.copy()
     df_master_final = df_master_final.drop_duplicates(subset=['activity_id'])
     df_master_final.to_csv(OUTPUT_PATH / "activities_master.csv", index=False)
+
+
+
+
     df_best_efforts.to_csv(OUTPUT_PATH / "best_efforts.csv", index=False)
     df_activity_splits.to_csv(OUTPUT_PATH / "activity_splits.csv", index=False)
     df_athletes_summary_new.to_csv(OUTPUT_PATH / "athletes_summary.csv", index=False)
