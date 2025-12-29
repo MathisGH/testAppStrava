@@ -600,13 +600,6 @@ if __name__ == "__main__":
 
     # --- 8. SAVE OUTPUT FILES ---
     logging.info("Step 7: Saving results...")
-    logging.info(
-        df_best_efforts
-        .groupby(['athlete_id', 'best_effort_name'])
-        .size()
-    )
-    logging.info(df_best_efforts['best_effort_name'].value_counts())
-
 
     if not df_master_existing.empty:
         df_master_final = pd.concat(
@@ -617,10 +610,6 @@ if __name__ == "__main__":
         df_master_final = df_master_new.copy()
     df_master_final = df_master_final.drop_duplicates(subset=['activity_id'])
     df_master_final.to_csv(OUTPUT_PATH / "activities_master.csv", index=False)
-
-
-
-
     df_best_efforts.to_csv(OUTPUT_PATH / "best_efforts.csv", index=False)
     df_activity_splits.to_csv(OUTPUT_PATH / "activity_splits.csv", index=False)
     df_athletes_summary_new.to_csv(OUTPUT_PATH / "athletes_summary.csv", index=False)
