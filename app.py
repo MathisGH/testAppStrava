@@ -452,7 +452,7 @@ if 'access_token' in st.session_state:
                 pb_cols = ["PB_5km", "PB_10km", "PB_21.1km", "PB_42.2km"]
                 for pb in pb_cols:
                     if not pd.isna(row[pb]):
-                        st.write(f"**{pb.replace('PB_', '')}:** {row[pb]}")
+                        st.write(f"**{pb.replace('PB_', '')}:** {row[pb]}min")
 
                 st.write("---")
                 # --- ATHLETES STATS END ---
