@@ -478,6 +478,12 @@ if __name__ == "__main__":
     logging.info("Step 1: Loading raw data...")
     df_raw = load_data(DATA_PATH)
 
+    logging.info(f"RAW shape: {df_raw.shape}")
+    logging.info(f"RAW athletes: {df_raw['athlete_id'].nunique()}")
+    logging.info(f"RAW activities: {df_raw['id'].nunique()}")
+    logging.info(f"RAW date range: {df_raw['start_date'].min()} → {df_raw['start_date'].max()}")
+
+
     # --- 2. LOAD EXISTING PROCESSED DATA ---
     logging.info("Step 2: Checking for existing processed data...")
     existing_master_path = OUTPUT_PATH / "activities_master.csv"
