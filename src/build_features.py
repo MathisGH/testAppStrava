@@ -141,7 +141,7 @@ def process_best_efforts(df_clean: pd.DataFrame, df_splits_metric: pd.DataFrame)
         })
 
         # keep only efforts with a PR rank
-        df_best_efforts = df_best_efforts.dropna(subset=['pr_rank'])
+        # df_best_efforts = df_best_efforts.dropna(subset=['pr_rank']) delete if it works without
 
         # keep original columns
         keep_cols_best_efforts = [
@@ -165,9 +165,18 @@ def process_best_efforts(df_clean: pd.DataFrame, df_splits_metric: pd.DataFrame)
 
         # 4) KEEP ONLY BEST RECORD PER DISTANCE
         # For each (best_effort_name), keep the row with the best pr_rank (=1 is better)
+        # df_best_efforts = (
+        #    df_best_efforts
+        #    .sort_values(by=['athlete_id','best_effort_name', 'pr_rank'])
+        #    .groupby(['athlete_id', 'best_effort_name'], as_index=False)
+        #    .first()
+        #) delete if it works without
+
+        # 4) KEEP ONLY FASTEST RECORD PER DISTANCE (NO pr_rank)
+        # For each (athlete_id, best_effort_name), keep the effort with minimal moving_time
         df_best_efforts = (
             df_best_efforts
-            .sort_values(by=['athlete_id','best_effort_name', 'pr_rank'])
+            .sort_values(by=['athlete_id', 'best_effort_name', 'moving_time'])
             .groupby(['athlete_id', 'best_effort_name'], as_index=False)
             .first()
         )
