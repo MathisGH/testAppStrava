@@ -391,7 +391,7 @@ if 'access_token' in st.session_state:
                         st.write("### HR Zones")
                         zones = pd.DataFrame({
                             "zone": ["Z1", "Z2", "Z3", "Z4"],
-                            "minutes": [
+                            "percent": [
                                 row["pct_Z1"], 
                                 row["pct_Z2"], 
                                 row["pct_Z3"], 
