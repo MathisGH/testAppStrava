@@ -566,13 +566,26 @@ if __name__ == "__main__":
 
             results.append(tmp)
 
-        return pd.concat(results)
+        return (
+            pd.concat(results)
+            .reset_index()
+            .rename(columns={"index": "start_date"})
+        )
 
-    pct_30d = pct_time_last_days(df_master_new, 30).drop(columns=["athlete_id"])
-    pct_60d = pct_time_last_days(df_master_new, 60).drop(columns=["athlete_id"])
+    pct_30d = pct_time_last_days(df_master_new, 30)
+    pct_60d = pct_time_last_days(df_master_new, 60)
 
-    df_master_new = df_master_new.join(pct_30d, on="start_date")
-    df_master_new = df_master_new.join(pct_60d, on="start_date")
+    df_master_new = df_master_new.merge(
+        pct_30d,
+        on=["athlete_id", "start_date"],
+        how="left"
+    )
+
+    df_master_new = df_master_new.merge(
+        pct_60d,
+        on=["athlete_id", "start_date"],
+        how="left"
+    )
 
     df_master_new = df_master_new.drop(columns=[
         "time_Z1","time_Z2","time_Z3","time_Z4",

@@ -392,10 +392,10 @@ if 'access_token' in st.session_state:
                         zones = pd.DataFrame({
                             "zone": ["Z1", "Z2", "Z3", "Z4"],
                             "minutes": [
-                                row["pct_Z1"]*row["moving_time_activity"], 
-                                row["pct_Z2"]*row["moving_time_activity"], 
-                                row["pct_Z3"]*row["moving_time_activity"], 
-                                row["pct_Z4"]*row["moving_time_activity"]
+                                row["pct_Z1"], 
+                                row["pct_Z2"], 
+                                row["pct_Z3"], 
+                                row["pct_Z4"]
                             ]
                         })
 
@@ -403,9 +403,9 @@ if 'access_token' in st.session_state:
                             alt.Chart(zones)
                             .mark_arc()
                             .encode(
-                                theta="minutes",
+                                theta="percent",
                                 color="zone",
-                                tooltip=["zone", "minutes"]
+                                tooltip=["zone", "percent"]
                             )
                         )
                         st.altair_chart(chart, use_container_width=True)
